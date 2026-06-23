@@ -27,5 +27,8 @@
 - [x] Expand Level 001 config with tower slots and obstacles.
 - [x] Add final-wave completion when all spawned enemies are cleared.
 - [x] Finish timed/auto-start scheduling for configured waves.
+- [x] Add endpoint-safe multi-point enemy path movement at 1x/10x.
+- [x] Add hero tower build validation with costs and slot occupancy.
+- [x] Add deterministic auto targeting, basic attacks, enemy death, and gold rewards.
 - [ ] Add deterministic targeting and area-of-effect skill models.
 - [ ] Add serialization compatibility tests for saved snapshots.

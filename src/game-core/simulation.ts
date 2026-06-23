@@ -1,10 +1,10 @@
-import type { Enemy, GameAction, GameState, LevelConfig, WaveRuntimeState } from "./types.js";
+import type { Enemy, GameAction, GameState, Hero, LevelConfig, WaveRuntimeState } from "./types.js";
 
 const HERO_SKILL_DAMAGE = 25;
 const HERO_SKILL_COOLDOWN_TICKS = 10;
-const ENEMY_PROGRESS_PER_TICK = 0.05;
+const DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND = 75;
 
-function applyAction(state: GameState, action: GameAction): GameState {
+function applyAction(state: GameState, action: GameAction, level?: LevelConfig): GameState {
   switch (action.type) {
     case "START":
       return state.status === "ready"
@@ -22,6 +22,8 @@ function applyAction(state: GameState, action: GameAction): GameState {
       return { ...state, clock: { ...state.clock, speed: action.speed } };
     case "START_NEXT_WAVE":
       return startNextWave(state);
+    case "BUILD_HERO":
+      return buildHero(state, action.slotId, action.heroArchetype, level);
     case "PLACE_HERO":
       return { ...state, heroes: [...state.heroes, action.hero] };
     case "SPAWN_ENEMY":
@@ -29,6 +31,40 @@ function applyAction(state: GameState, action: GameAction): GameState {
     case "CAST_SKILL":
       return castSkill(state, action.heroId, action.targetEnemyId);
   }
+}
+
+
+function buildHero(state: GameState, slotId: string, heroArchetype: string, level?: LevelConfig): GameState {
+  const slot = state.towerSlots.find((candidate) => candidate.id === slotId);
+  const config = level?.heroConfigs?.find((candidate) => candidate.archetype === heroArchetype);
+
+  if (!slot || !config || !slot.unlocked || slot.occupiedByHeroId || state.resources.gold < config.buildCost) {
+    return state;
+  }
+
+  const hero: Hero = {
+    id: `hero-${state.heroes.length + 1}`,
+    archetype: heroArchetype,
+    position: slot.position,
+    health: config.maxHealth,
+    maxHealth: config.maxHealth,
+    cooldownTicksRemaining: 0,
+    attackCooldownMs: 0,
+    slotId: slot.id,
+    totalCost: config.buildCost,
+  };
+
+  return {
+    ...state,
+    resources: {
+      ...state.resources,
+      gold: state.resources.gold - config.buildCost,
+    },
+    heroes: [...state.heroes, hero],
+    towerSlots: state.towerSlots.map((candidate) =>
+      candidate.id === slot.id ? { ...candidate, occupiedByHeroId: hero.id } : candidate,
+    ),
+  };
 }
 
 function castSkill(state: GameState, heroId: string, targetEnemyId: string): GameState {
@@ -57,28 +93,177 @@ function castSkill(state: GameState, heroId: string, targetEnemyId: string): Gam
   };
 }
 
-function advanceEnemy(enemy: Enemy): Enemy {
+function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+function interpolate(a: { x: number; y: number }, b: { x: number; y: number }, progress: number): { x: number; y: number } {
   return {
-    ...enemy,
-    progress: enemy.progress + (enemy.carryingCrystal ? -ENEMY_PROGRESS_PER_TICK : ENEMY_PROGRESS_PER_TICK),
+    x: a.x + (b.x - a.x) * progress,
+    y: a.y + (b.y - a.y) * progress,
   };
 }
 
-function resolveCrystalAndBase(state: GameState, advancedEnemies: readonly Enemy[]): Pick<GameState, "baseHealth" | "crystal" | "enemies" | "status"> {
+function getEnemySpeed(level: LevelConfig | undefined, enemy: Enemy): number {
+  return (
+    level?.enemies?.find((candidate) => candidate.archetype === enemy.archetype)?.speedUnitsPerSecond ??
+    DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND
+  );
+}
+
+function advanceEnemyAlongPath(enemy: Enemy, level?: LevelConfig): Enemy {
+  const path = level?.path;
+  if (!path || path.length < 2) {
+    return {
+      ...enemy,
+      progress: Math.max(0, Math.min(1, enemy.progress + (enemy.carryingCrystal ? -0.05 : 0.05))),
+    };
+  }
+
+  const lastSegmentIndex = path.length - 2;
+  let pathIndex = Math.max(0, Math.min(enemy.pathIndex, lastSegmentIndex));
+  let progress = Math.max(0, Math.min(enemy.progress, 1));
+  let remainingDistance = getEnemySpeed(level, enemy) * (level.fixedDeltaMs / 1000);
+  const direction = enemy.carryingCrystal ? -1 : 1;
+
+  while (remainingDistance > 0) {
+    const segmentStart = path[pathIndex];
+    const segmentEnd = path[pathIndex + 1];
+    if (!segmentStart || !segmentEnd) break;
+
+    const segmentLength = distance(segmentStart, segmentEnd);
+    if (segmentLength === 0) {
+      if (direction > 0 && pathIndex < lastSegmentIndex) pathIndex += 1;
+      else if (direction < 0 && pathIndex > 0) pathIndex -= 1;
+      else break;
+      continue;
+    }
+
+    const distanceToSegmentEnd = direction > 0 ? (1 - progress) * segmentLength : progress * segmentLength;
+    if (remainingDistance < distanceToSegmentEnd) {
+      progress += direction * (remainingDistance / segmentLength);
+      remainingDistance = 0;
+      break;
+    }
+
+    remainingDistance -= distanceToSegmentEnd;
+    if (direction > 0) {
+      if (pathIndex >= lastSegmentIndex) {
+        progress = 1;
+        break;
+      }
+      pathIndex += 1;
+      progress = 0;
+    } else {
+      if (pathIndex <= 0) {
+        progress = 0;
+        break;
+      }
+      pathIndex -= 1;
+      progress = 1;
+    }
+  }
+
+  const segmentStart = path[pathIndex] ?? path[0]!;
+  const segmentEnd = path[pathIndex + 1] ?? path[path.length - 1]!;
+  const position = interpolate(segmentStart, segmentEnd, progress);
+  return { ...enemy, pathIndex, progress, position };
+}
+
+
+function getHeroConfig(level: LevelConfig | undefined, hero: Hero) {
+  return level?.heroConfigs?.find((candidate) => candidate.archetype === hero.archetype);
+}
+
+function getEnemyRewardGold(level: LevelConfig | undefined, enemy: Enemy): number {
+  return level?.enemies?.find((candidate) => candidate.archetype === enemy.archetype)?.rewardGold ?? 0;
+}
+
+function enemyPathScore(enemy: Enemy): number {
+  return enemy.pathIndex + enemy.progress;
+}
+
+function selectTarget(hero: Hero, enemies: readonly Enemy[], level?: LevelConfig): Enemy | undefined {
+  const config = getHeroConfig(level, hero);
+  if (!config) return undefined;
+
+  return enemies
+    .filter((enemy) => distance(hero.position, enemy.position) <= config.attackRange)
+    .sort((a, b) => enemyPathScore(b) - enemyPathScore(a))[0];
+}
+
+function applyTowerCombat(state: GameState, level?: LevelConfig): GameState {
+  let enemies = [...state.enemies];
+  let rewardGold = 0;
+  let killedCount = 0;
+  let recoveredCrystal = false;
+
+  const heroes = state.heroes.map((hero) => {
+    const config = getHeroConfig(level, hero);
+    if (!config) {
+      return { ...hero, attackCooldownMs: Math.max(0, hero.attackCooldownMs - state.clock.fixedDeltaMs) };
+    }
+
+    const cooledHero = { ...hero, attackCooldownMs: Math.max(0, hero.attackCooldownMs - state.clock.fixedDeltaMs) };
+    if (cooledHero.attackCooldownMs > 0) return cooledHero;
+
+    const target = selectTarget(cooledHero, enemies, level);
+    if (!target) {
+      const { targetEnemyId: _targetEnemyId, ...untargetedHero } = cooledHero;
+      return untargetedHero;
+    }
+
+    let killedEnemy: Enemy | undefined;
+    enemies = enemies
+      .map((enemy) => {
+        if (enemy.id !== target.id) return enemy;
+        const damaged = { ...enemy, health: enemy.health - config.attackDamage };
+        if (damaged.health <= 0) killedEnemy = damaged;
+        return damaged;
+      })
+      .filter((enemy) => enemy.health > 0);
+
+    if (killedEnemy) {
+      rewardGold += getEnemyRewardGold(level, killedEnemy);
+      killedCount += 1;
+      recoveredCrystal = recoveredCrystal || killedEnemy.carryingCrystal;
+    }
+
+    return { ...cooledHero, attackCooldownMs: config.attackIntervalMs, targetEnemyId: target.id };
+  });
+
+  return {
+    ...state,
+    heroes,
+    enemies,
+    resources: {
+      ...state.resources,
+      gold: state.resources.gold + rewardGold,
+    },
+    crystal: recoveredCrystal ? { atBase: true } : state.crystal,
+    wave: killedCount > 0 && state.wave.isWaveActive
+      ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + killedCount }
+      : state.wave,
+  };
+}
+
+function resolveCrystalAndBase(state: GameState, advancedEnemies: readonly Enemy[], level?: LevelConfig): Pick<GameState, "baseHealth" | "crystal" | "enemies" | "status"> {
   let baseHealth = state.baseHealth;
   let crystal = state.crystal;
   let status = state.status;
   const enemies: Enemy[] = [];
 
   for (const enemy of advancedEnemies) {
-    if (enemy.carryingCrystal && enemy.progress <= 0) {
+    if (enemy.carryingCrystal && enemy.pathIndex === 0 && enemy.progress <= 0) {
       status = "lost";
       crystal = { atBase: false, carrierEnemyId: enemy.id };
       enemies.push({ ...enemy, progress: 0 });
       continue;
     }
 
-    if (!enemy.carryingCrystal && enemy.progress >= 1) {
+    const lastPathSegmentIndex = level?.path ? Math.max(0, level.path.length - 2) : 0;
+
+    if (!enemy.carryingCrystal && enemy.progress >= 1 && enemy.pathIndex === lastPathSegmentIndex) {
       if (crystal.atBase) {
         const carrier = { ...enemy, progress: 1, carryingCrystal: true };
         crystal = { atBase: false, carrierEnemyId: carrier.id };
@@ -126,6 +311,7 @@ function createEnemyFromConfig(level: LevelConfig, archetype: string, sequence: 
     archetype,
     pathIndex: 0,
     progress: 0,
+    position: level.path[0] ?? { x: 0, y: 0 },
     health: config?.maxHealth ?? 50,
     maxHealth: config?.maxHealth ?? 50,
     carryingCrystal: false,
@@ -199,7 +385,13 @@ function advanceWave(state: GameState, level?: LevelConfig): Pick<GameState, "en
 function advanceRunningTick(state: GameState, level?: LevelConfig): GameState {
   const preparedState = prepareWaveForTick(state, level);
   const waveAdvanced = advanceWave(preparedState, level);
-  const resolved = resolveCrystalAndBase({ ...preparedState, enemies: waveAdvanced.enemies }, waveAdvanced.enemies.map(advanceEnemy));
+  const movedState = {
+    ...preparedState,
+    enemies: waveAdvanced.enemies.map((enemy) => advanceEnemyAlongPath(enemy, level)),
+    wave: waveAdvanced.wave,
+  };
+  const combatState = applyTowerCombat(movedState, level);
+  const resolved = resolveCrystalAndBase(combatState, combatState.enemies, level);
 
   const completedAllWaves =
     waveAdvanced.wave.totalWaves > 0 &&
@@ -211,28 +403,29 @@ function advanceRunningTick(state: GameState, level?: LevelConfig): GameState {
     ...preparedState,
     ...resolved,
     status: completedAllWaves && resolved.status === "running" ? "won" : resolved.status,
-    wave: waveAdvanced.wave,
+    resources: combatState.resources,
+    wave: combatState.wave,
     clock: { ...state.clock, tick: state.clock.tick + 1 },
-    heroes: state.heroes.map((hero) => ({
+    heroes: combatState.heroes.map((hero) => ({
       ...hero,
       cooldownTicksRemaining: Math.max(0, hero.cooldownTicksRemaining - 1),
     })),
   };
 }
 
-export function reduceActions(state: GameState): GameState {
-  const reduced = state.pendingActions.reduce(applyAction, state);
+export function reduceActions(state: GameState, level?: LevelConfig): GameState {
+  const reduced = state.pendingActions.reduce((nextState, action) => applyAction(nextState, action, level), state);
   return { ...reduced, pendingActions: [] };
 }
 
 export function stepFixedTick(state: GameState, level?: LevelConfig): GameState {
-  const reduced = reduceActions(state);
+  const reduced = reduceActions(state, level);
   if (reduced.clock.paused || reduced.status !== "running") return reduced;
   return advanceRunningTick(reduced, level);
 }
 
 export function stepSimulation(state: GameState, fixedTicks = 1, level?: LevelConfig): GameState {
-  let nextState = reduceActions(state);
+  let nextState = reduceActions(state, level);
   const ticksToRun = Math.max(0, Math.trunc(fixedTicks)) * nextState.clock.speed;
 
   for (let index = 0; index < ticksToRun; index += 1) {

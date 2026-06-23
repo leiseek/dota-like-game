@@ -16,6 +16,10 @@ export type Hero = Readonly<{
   health: number;
   maxHealth: number;
   cooldownTicksRemaining: number;
+  attackCooldownMs: number;
+  targetEnemyId?: EntityId;
+  slotId?: string;
+  totalCost: number;
 }>;
 
 export type Enemy = Readonly<{
@@ -23,6 +27,7 @@ export type Enemy = Readonly<{
   archetype: string;
   pathIndex: number;
   progress: number;
+  position: Vector2;
   health: number;
   maxHealth: number;
   carryingCrystal: boolean;
@@ -52,9 +57,25 @@ export type WaveConfig = Readonly<{
   spawnGroups: readonly WaveSpawnGroup[];
 }>;
 
+export type HeroConfig = Readonly<{
+  archetype: string;
+  buildCost: number;
+  maxHealth: number;
+  attackDamage: number;
+  attackIntervalMs: number;
+  attackRange: number;
+}>;
+
+export type ResourceState = Readonly<{
+  gold: number;
+  manaCrystal: number;
+}>;
+
 export type EnemyConfig = Readonly<{
   archetype: string;
   maxHealth: number;
+  speedUnitsPerSecond: number;
+  rewardGold: number;
 }>;
 
 export type TowerSlotConfig = Readonly<{
@@ -110,6 +131,7 @@ export type GameState = Readonly<{
   randomSeed: number;
   randomState: number;
   baseHealth: number;
+  resources: ResourceState;
   crystal: CrystalState;
   heroes: readonly Hero[];
   enemies: readonly Enemy[];
@@ -124,8 +146,11 @@ export type LevelConfig = Readonly<{
   fixedDeltaMs: number;
   randomSeed: number;
   baseHealth: number;
+  startingGold: number;
+  startingManaCrystal: number;
   path: readonly Vector2[];
-  startingHeroes: readonly Omit<Hero, "id" | "cooldownTicksRemaining">[];
+  startingHeroes: readonly Omit<Hero, "id" | "cooldownTicksRemaining" | "attackCooldownMs" | "totalCost">[];
+  heroConfigs?: readonly HeroConfig[];
   enemies?: readonly EnemyConfig[];
   towerSlots?: readonly TowerSlotConfig[];
   obstacles?: readonly ObstacleConfig[];
@@ -138,6 +163,7 @@ export type GameAction =
   | Readonly<{ type: "RESUME" }>
   | Readonly<{ type: "SET_SPEED"; speed: GameSpeed }>
   | Readonly<{ type: "START_NEXT_WAVE" }>
+  | Readonly<{ type: "BUILD_HERO"; slotId: EntityId; heroArchetype: string }>
   | Readonly<{ type: "PLACE_HERO"; hero: Hero }>
   | Readonly<{ type: "CAST_SKILL"; heroId: EntityId; targetEnemyId: EntityId }>
   | Readonly<{ type: "SPAWN_ENEMY"; enemy: Enemy }>;

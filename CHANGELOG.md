@@ -4,6 +4,9 @@
 
 ### Added
 
+- Added tower auto-targeting, basic attacks, enemy death, gold rewards, and wave kill-count tests.
+- Added hero tower build validation with costs, Level 001 hero configs, resource state, and slot occupancy tests.
+- Added endpoint-safe multi-point enemy path traversal with per-archetype speeds and 10x regression coverage.
 - Added timed wave auto-start scheduling from configured wave start times.
 - Added Level 001 tower slot and obstacle config plus serializable runtime state.
 - Added wave kill counting and final-wave victory completion tests.

@@ -17,11 +17,17 @@ export function createInitialGameState(level: LevelConfig): GameState {
     randomSeed,
     randomState: randomSeed,
     baseHealth: level.baseHealth,
+    resources: {
+      gold: level.startingGold,
+      manaCrystal: level.startingManaCrystal,
+    },
     crystal: { atBase: true },
     heroes: level.startingHeroes.map((hero, index) => ({
       ...hero,
       id: `hero-${index + 1}`,
       cooldownTicksRemaining: 0,
+      attackCooldownMs: 0,
+      totalCost: 0,
     })),
     enemies: [],
     pendingActions: [],

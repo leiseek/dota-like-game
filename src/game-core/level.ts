@@ -5,6 +5,8 @@ export const tutorialLevel: LevelConfig = {
   fixedDeltaMs: 100,
   randomSeed: 1337,
   baseHealth: 20,
+  startingGold: 300,
+  startingManaCrystal: 100,
   path: [
     { x: 0, y: 0 },
     { x: 5, y: 0 },
@@ -25,6 +27,8 @@ export const level001Config: LevelConfig = {
   fixedDeltaMs: 33.333,
   randomSeed: 1001,
   baseHealth: 12,
+  startingGold: 300,
+  startingManaCrystal: 100,
   path: [
     { x: 40, y: 110 },
     { x: 220, y: 110 },
@@ -38,6 +42,13 @@ export const level001Config: LevelConfig = {
     { x: 920, y: 250 },
   ],
   startingHeroes: [],
+
+  heroConfigs: [
+    { archetype: "hook-guardian", buildCost: 120, maxHealth: 100, attackDamage: 18, attackIntervalMs: 1150, attackRange: 130 },
+    { archetype: "frost-priestess", buildCost: 110, maxHealth: 100, attackDamage: 10, attackIntervalMs: 1000, attackRange: 150 },
+    { archetype: "storm-sigilist", buildCost: 140, maxHealth: 100, attackDamage: 22, attackIntervalMs: 1400, attackRange: 165 },
+    { archetype: "moonblade-ranger", buildCost: 130, maxHealth: 100, attackDamage: 16, attackIntervalMs: 800, attackRange: 155 },
+  ],
   towerSlots: [
     { id: "T01", position: { x: 150, y: 190 }, initiallyUnlocked: true },
     { id: "T02", position: { x: 280, y: 180 }, initiallyUnlocked: true },
@@ -59,12 +70,12 @@ export const level001Config: LevelConfig = {
     { id: "O06", position: { x: 120, y: 300 }, maxHealth: 80, rewardGold: 40 },
   ],
   enemies: [
-    { archetype: "rift-grunt", maxHealth: 50 },
-    { archetype: "swift-beast", maxHealth: 36 },
-    { archetype: "crystal-thief", maxHealth: 70 },
-    { archetype: "stoneguard", maxHealth: 150 },
-    { archetype: "shield-acolyte", maxHealth: 85 },
-    { archetype: "rift-beast-hatchling", maxHealth: 900 },
+    { archetype: "rift-grunt", maxHealth: 50, speedUnitsPerSecond: 72, rewardGold: 10 },
+    { archetype: "swift-beast", maxHealth: 36, speedUnitsPerSecond: 105, rewardGold: 12 },
+    { archetype: "crystal-thief", maxHealth: 70, speedUnitsPerSecond: 88, rewardGold: 18 },
+    { archetype: "stoneguard", maxHealth: 150, speedUnitsPerSecond: 48, rewardGold: 25 },
+    { archetype: "shield-acolyte", maxHealth: 85, speedUnitsPerSecond: 60, rewardGold: 16 },
+    { archetype: "rift-beast-hatchling", maxHealth: 900, speedUnitsPerSecond: 36, rewardGold: 100 },
   ],
   waves: [
     { id: "wave-01", startsAtMs: 0, spawnGroups: [{ enemyArchetype: "rift-grunt", count: 8, intervalMs: 1200 }] },

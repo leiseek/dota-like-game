@@ -1,10 +1,10 @@
 ---
 doc_id: DOC_VERSION_INDEX
-version: 0.3.3
+version: 0.3.6
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-23
-change_summary: v0.3.3 wave auto scheduling status updates
+change_summary: v0.3.6 combat status updates
 ---
 
 # Document Version Index
@@ -25,9 +25,9 @@ change_summary: v0.3.3 wave auto scheduling status updates
 | HERO_DESIGN.md | 0.2.0 | active | Combat Designer Agent | first hero set |
 | UI_UX_SPEC.md | 0.2.0 | active | UX/UI Agent | battle HUD and controls |
 | ROADMAP.md | 0.1.0 | active | Executive Producer Agent | phase roadmap |
-| TASK_BOARD.md | 0.3.3 | active | Team Leader Agent | WAVE-001 complete; ENEMY-001 next |
+| TASK_BOARD.md | 0.3.6 | active | Team Leader Agent | COMBAT-001 complete; HUD-001 next |
 | DECISIONS.md | 0.3.0 | active | Team Leader Agent | ADR-0005 added |
-| CHANGELOG.md | 0.3.3 | active | Team Leader Agent | Timed wave auto-start scheduling recorded |
+| CHANGELOG.md | 0.3.6 | active | Team Leader Agent | Auto combat recorded |
 
 ## Status Definitions
 

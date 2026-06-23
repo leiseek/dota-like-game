@@ -15,8 +15,17 @@
 - [x] Return the crystal to base when a skill kills the carrier enemy.
 - [x] Add regression tests for crystal steal/loss and carrier kill recovery.
 
+## Iteration 3 - Level 001 waves
+
+- [x] Review all docs and code before continuing incomplete tasks.
+- [x] Add Level 001 path, enemy archetypes, and 10-wave config from docs.
+- [x] Add wave runtime state and `START_NEXT_WAVE` configured spawning.
+- [x] Add regression tests for Level 001 config and deterministic wave spawning.
+
 ## Next
 
-- [ ] Expand level config with enemy waves and spawn scheduling.
+- [x] Expand Level 001 config with tower slots and obstacles.
+- [x] Add final-wave completion when all spawned enemies are cleared.
+- [x] Finish timed/auto-start scheduling for configured waves.
 - [ ] Add deterministic targeting and area-of-effect skill models.
 - [ ] Add serialization compatibility tests for saved snapshots.

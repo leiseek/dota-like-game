@@ -1,4 +1,4 @@
-export { tutorialLevel } from "./level.js";
+export { level001Config, tutorialLevel } from "./level.js";
 export { nextRandom, normalizeSeed } from "./random.js";
 export { createInitialGameState, createSnapshot, enqueueAction, restoreSnapshot } from "./state.js";
 export { reduceActions, stepFixedTick, stepSimulation } from "./simulation.js";

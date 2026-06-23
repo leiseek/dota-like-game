@@ -1,10 +1,10 @@
 ---
 doc_id: TASK_BOARD
-version: 0.3.0
+version: 0.3.3
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-23
-change_summary: task board with Codex handoff and Phase 1 first tasks
+change_summary: WAVE-001 auto scheduling completed
 ---
 
 # Task Board
@@ -38,28 +38,27 @@ change_summary: task board with Codex handoff and Phase 1 first tasks
 
 | Task ID | Title | Owner Agent | Status | Acceptance Summary |
 |---|---|---|---|---|
-| CORE-FOUNDATION-001 | game-core foundation | Codex / Engineering | Todo | types, state, action, clock, RNG, configs |
-| CORE-002 | GameState type definitions | Engineering | Todo | create, serialize, deserialize |
-| CORE-003 | GameAction entry | Engineering | Todo | UI input becomes actions |
-| CORE-004 | GameClock / fixed tick | Engineering | Todo | pause and 1x/2x/5x/10x |
-| CORE-005 | SeededRandom | Engineering | Todo | same seed reproducible |
-| MAP-001 | LEVEL_001 config | Engineering | Todo | path, slots, obstacles loaded |
+| CORE-FOUNDATION-001 | game-core foundation | Codex / Engineering | Done | platform-neutral TypeScript core, state, action, clock, RNG, configs, snapshots, tests |
+| CORE-002 | GameState type definitions | Engineering | Done | create, serialize, deserialize, snapshot clone tests |
+| CORE-003 | GameAction entry | Engineering | Done | start, pause, resume, speed, skill, spawn, start-next-wave actions |
+| CORE-004 | GameClock / fixed tick | Engineering | Done | pause and 1x/2x/5x/10x covered by tests |
+| CORE-005 | SeededRandom | Engineering | Done | deterministic seeded random utility added |
+| MAP-001 | LEVEL_001 config | Engineering | Done | documented path, slots, obstacles, enemy archetypes, and waves loaded into core state/config |
 | ENEMY-001 | enemy path movement | Engineering | Todo | 1x/10x endpoint-safe |
-| WAVE-001 | wave system | Engineering | Todo | 10 waves by config |
+| WAVE-001 | wave system | Engineering | Done | START_NEXT_WAVE, timed auto-start, deterministic spawning, kill counts, and final-wave victory covered by tests |
 | TOWER-001 | build hero tower | Engineering | Todo | cost, slot occupancy |
 | COMBAT-001 | auto target and basic attack | Engineering | Todo | enemy HP/death/gold |
 | HUD-001 | minimal HUD | UX/UI + Engineering | Todo | crystals, gold, mana, wave, pause, speed |
 | SAVE-001 | minimal Battle Snapshot | Engineering | Todo | restore to paused state |
 | REVIEW-002 | Phase 1 Technical Review | Self Review | Todo | GameClock + GameState pass review |
 
-## Codex First Task
+## Current Implementation Note
 
-Codex should execute `CORE-FOUNDATION-001` only after this docs-only PR is merged or used as context.
+`MAP-001` and `WAVE-001` are now complete for the current core foundation. The next safest continuation is `ENEMY-001` path movement with endpoint-safe 1x/10x behavior before tower combat or rendering adapters.
 
-## Current Blocker
+## Self Review
 
-No implementation should start in this docs-only PR.
-
-## Next Recommended Action
-
-After docs-only baseline is approved, create a separate implementation PR for `CORE-FOUNDATION-001`.
+Review Result: Pass
+Main Issues: Enemy movement still uses normalized progress rather than the documented multi-point path; obstacle destruction behavior is data-only and not interactable yet.
+Required Changes: Implement ENEMY-001 endpoint-safe path movement and then TOWER-001 build validation.
+Risk Level: Medium

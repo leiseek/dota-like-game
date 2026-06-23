@@ -1,13 +1,70 @@
 ---
 doc_id: CHANGELOG
-version: 0.3.0
+version: 0.3.3
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-23
-change_summary: v0.3.0 complete documentation baseline
+change_summary: timed wave auto-start scheduling recorded
 ---
 
 # Changelog
+
+## [0.3.3] - 2026-06-23
+
+### Added
+
+- Added timed wave auto-start scheduling using each configured wave `startsAtMs`.
+- Added regression coverage proving configured waves remain waiting before their scheduled time and spawn deterministically after the threshold.
+
+### Changed
+
+- Marked `WAVE-001` done for the current core foundation.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Enemy movement still needs endpoint-safe path traversal across Level 001 points; obstacles are not destructible yet.
+Required Changes: Continue with ENEMY-001 path movement before tower combat or rendering adapters.
+Risk Level: Medium
+
+## [0.3.2] - 2026-06-23
+
+### Added
+
+- Added Level 001 tower slot and obstacle config to the platform-neutral core.
+- Added serializable tower slot and obstacle runtime state initialization in `GameState`.
+- Added wave kill counting and final-wave victory completion once all spawned enemies are cleared.
+- Added regression tests for Level 001 map runtime data and last-wave completion.
+
+### Changed
+
+- Marked `MAP-001` done and refined `WAVE-001` remaining work to timed/auto-start scheduling.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Obstacles are loaded as runtime state but are not yet destructible through actions/combat. Wave auto-start timing remains pending.
+Required Changes: Continue with WAVE-001 auto scheduling, then ENEMY-001 endpoint-safe path movement.
+Risk Level: Medium
+
+## [0.3.1] - 2026-06-23
+
+### Added
+
+- Added `level001Config` with the documented Level 001 path, enemy archetypes, and 10-wave spawn table.
+- Added wave runtime state and `START_NEXT_WAVE` handling for deterministic configured spawning.
+- Added regression tests for Level 001 wave config and spawn scheduling.
+
+### Changed
+
+- Updated Phase 1 task status to mark core foundation tasks complete and wave/map tasks in progress.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Slot/obstacle config and full wave-completion behavior remain pending.
+Required Changes: Continue with MAP-001 slot/obstacle runtime data and WAVE-001 completion rules.
+Risk Level: Medium
 
 ## [0.3.0] - 2026-06-23
 

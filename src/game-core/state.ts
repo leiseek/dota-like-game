@@ -25,6 +25,33 @@ export function createInitialGameState(level: LevelConfig): GameState {
     })),
     enemies: [],
     pendingActions: [],
+    towerSlots: (level.towerSlots ?? []).map((slot) => ({
+      id: slot.id,
+      position: slot.position,
+      unlocked: slot.initiallyUnlocked,
+    })),
+    obstacles: (level.obstacles ?? []).map((obstacle) => ({
+      id: obstacle.id,
+      position: obstacle.position,
+      health: obstacle.maxHealth,
+      maxHealth: obstacle.maxHealth,
+      rewardGold: obstacle.rewardGold,
+      ...(obstacle.unlocksSlotId ? { unlocksSlotId: obstacle.unlocksSlotId } : {}),
+      destroyed: false,
+    })),
+    wave: {
+      currentWaveIndex: 0,
+      totalWaves: level.waves?.length ?? 0,
+      waveElapsedMs: 0,
+      activeGroupIndex: 0,
+      spawnedCountInGroup: 0,
+      nextSpawnElapsedMs: 0,
+      isWaveActive: false,
+      isWaitingNextWave: (level.waves?.length ?? 0) > 0,
+      spawnedCountInWave: 0,
+      killedCountInWave: 0,
+      nextEnemySequence: 1,
+    },
   };
 }
 

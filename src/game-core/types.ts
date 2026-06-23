@@ -40,6 +40,68 @@ export type GameClock = Readonly<{
   paused: boolean;
 }>;
 
+export type WaveSpawnGroup = Readonly<{
+  enemyArchetype: string;
+  count: number;
+  intervalMs: number;
+}>;
+
+export type WaveConfig = Readonly<{
+  id: string;
+  startsAtMs: number;
+  spawnGroups: readonly WaveSpawnGroup[];
+}>;
+
+export type EnemyConfig = Readonly<{
+  archetype: string;
+  maxHealth: number;
+}>;
+
+export type TowerSlotConfig = Readonly<{
+  id: string;
+  position: Vector2;
+  initiallyUnlocked: boolean;
+}>;
+
+export type ObstacleConfig = Readonly<{
+  id: string;
+  position: Vector2;
+  maxHealth: number;
+  rewardGold: number;
+  unlocksSlotId?: string;
+}>;
+
+export type TowerSlotState = Readonly<{
+  id: string;
+  position: Vector2;
+  unlocked: boolean;
+  occupiedByHeroId?: EntityId;
+}>;
+
+export type ObstacleState = Readonly<{
+  id: string;
+  position: Vector2;
+  health: number;
+  maxHealth: number;
+  rewardGold: number;
+  unlocksSlotId?: string;
+  destroyed: boolean;
+}>;
+
+export type WaveRuntimeState = Readonly<{
+  currentWaveIndex: number;
+  totalWaves: number;
+  waveElapsedMs: number;
+  activeGroupIndex: number;
+  spawnedCountInGroup: number;
+  nextSpawnElapsedMs: number;
+  isWaveActive: boolean;
+  isWaitingNextWave: boolean;
+  spawnedCountInWave: number;
+  killedCountInWave: number;
+  nextEnemySequence: number;
+}>;
+
 export type GameState = Readonly<{
   schemaVersion: 1;
   levelId: string;
@@ -52,6 +114,9 @@ export type GameState = Readonly<{
   heroes: readonly Hero[];
   enemies: readonly Enemy[];
   pendingActions: readonly GameAction[];
+  towerSlots: readonly TowerSlotState[];
+  obstacles: readonly ObstacleState[];
+  wave: WaveRuntimeState;
 }>;
 
 export type LevelConfig = Readonly<{
@@ -61,6 +126,10 @@ export type LevelConfig = Readonly<{
   baseHealth: number;
   path: readonly Vector2[];
   startingHeroes: readonly Omit<Hero, "id" | "cooldownTicksRemaining">[];
+  enemies?: readonly EnemyConfig[];
+  towerSlots?: readonly TowerSlotConfig[];
+  obstacles?: readonly ObstacleConfig[];
+  waves?: readonly WaveConfig[];
 }>;
 
 export type GameAction =
@@ -68,6 +137,7 @@ export type GameAction =
   | Readonly<{ type: "PAUSE" }>
   | Readonly<{ type: "RESUME" }>
   | Readonly<{ type: "SET_SPEED"; speed: GameSpeed }>
+  | Readonly<{ type: "START_NEXT_WAVE" }>
   | Readonly<{ type: "PLACE_HERO"; hero: Hero }>
   | Readonly<{ type: "CAST_SKILL"; heroId: EntityId; targetEnemyId: EntityId }>
   | Readonly<{ type: "SPAWN_ENEMY"; enemy: Enemy }>;

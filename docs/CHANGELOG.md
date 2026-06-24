@@ -1,13 +1,33 @@
 ---
 doc_id: CHANGELOG
-version: 0.4.3
+version: 0.5.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: win/lose/star settlement recorded
+change_summary: Demo 0.1 readiness review recorded
 ---
 
 # Changelog
+
+## [0.5.0] - 2026-06-24
+
+### Added
+
+- Added GitHub Actions CI workflow that runs `npm run check` on PRs and pushes to `main`.
+- Added `docs/WEB_PREVIEW_SMOKE_PLAYTEST.md` with manual Web Preview smoke test matrix and playtest notes template.
+- Added `docs/DEMO_01_CORE_SELF_REVIEW.md` with Demo 0.1 Core Self Review and conditional pass for internal Web playtest.
+
+### Changed
+
+- Updated task board to mark `CI-001`, `PLAYTEST-001` checklist creation, and `REVIEW-003` documentation complete.
+- Added follow-up readiness tasks for Web Preview polish, first balance pass, snapshot validation hardening, and destructible obstacle gameplay.
+
+### Self Review
+
+Review Result: Conditional Pass
+Main Issues: Browser smoke playtest and balance validation still require an actual local run.
+Required Changes: Run CI/local checks, fill the playtest checklist with real results, then prioritize polish from findings.
+Risk Level: Medium
 
 ## [0.4.3] - 2026-06-24
 

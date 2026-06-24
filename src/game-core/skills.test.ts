@@ -83,7 +83,7 @@ test("Frost Priestess damages and slows enemies in the targeted area", () => {
 test("Storm Chain jumps farther when the target is slowed by frost", () => {
   const withFrost = buildHero(createInitialGameState(level001Config), "T01", "frost-priestess");
   const withStorm = buildHero(withFrost, "T02", "storm-sigilist");
-  const enemies = Array.from({ length: 7 }, (_, index) => testEnemy(`enemy-${index + 1}`, { x: 150 + index * 18, y: 190 }, 300));
+  const enemies = Array.from({ length: 7 }, (_, index) => testEnemy(`enemy-${index + 1}`, { x: 150 + index * 15, y: 190 }, 300));
   const withEnemies = spawnEnemies(withStorm, enemies);
 
   const afterFrost = stepSimulation(

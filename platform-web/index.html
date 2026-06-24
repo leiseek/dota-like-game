@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ancient Defense Web Preview</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="top-bar">
+        <div>
+          <h1>Ancient Defense</h1>
+          <p>Web Playtest Preview · Core-first Canvas adapter</p>
+        </div>
+        <div class="hud" aria-live="polite">
+          <span id="hud-crystals">Crystals --/--</span>
+          <span id="hud-gold">Gold --</span>
+          <span id="hud-mana">Mana --</span>
+          <span id="hud-wave">Wave --/--</span>
+          <span id="hud-status">Status --</span>
+        </div>
+      </header>
+
+      <section class="battle-layout">
+        <canvas id="battle-canvas" width="960" height="540" aria-label="Battle map preview"></canvas>
+        <aside class="control-panel">
+          <h2>Controls</h2>
+          <button id="start-button" type="button">Start</button>
+          <button id="pause-button" type="button">Pause</button>
+          <button id="speed-button" type="button">Speed 1x</button>
+          <button id="wave-button" type="button">Start Next Wave</button>
+
+          <label for="hero-select">Build hero</label>
+          <select id="hero-select">
+            <option value="hook-guardian">Hook Guardian · 120g</option>
+            <option value="frost-priestess">Frost Priestess · 110g</option>
+            <option value="storm-sigilist">Storm Sigilist · 140g</option>
+            <option value="moonblade-ranger">Moonblade Ranger · 130g</option>
+          </select>
+
+          <button id="save-button" type="button">Save and Exit</button>
+          <button id="resume-button" type="button">Continue Saved Battle</button>
+          <button id="abandon-button" type="button">Abandon Saved Battle</button>
+
+          <div class="hint">
+            <strong>How to play</strong>
+            <p>Click an empty slot to build the selected hero. Click a hero to select it, then click an enemy to cast its active skill.</p>
+          </div>
+          <p id="message" class="message">Ready.</p>
+        </aside>
+      </section>
+    </main>
+    <script type="module" src="./dist/main.js"></script>
+  </body>
+</html>

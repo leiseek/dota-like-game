@@ -2,6 +2,8 @@ const DEFAULT_HERO_SKILL_DAMAGE = 25;
 const DEFAULT_HERO_SKILL_COOLDOWN_TICKS = 10;
 const DEFAULT_HERO_SKILL_MANA_COST = 0;
 const DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND = 75;
+const DEFAULT_CRYSTAL_RETURN_SPEED_MULTIPLIER = 0.5;
+const CRYSTAL_PICKUP_RADIUS = 18;
 const DEFAULT_HOOK_PULL_DISTANCE = 160;
 const DEFAULT_FROST_RADIUS = 90;
 const DEFAULT_FROST_SLOW_MS = 4_000;
@@ -93,7 +95,7 @@ function castSkill(state, heroId, targetEnemyId, level) {
     const rewardGold = result.killedEnemies.reduce((sum, enemy) => sum + getEnemyRewardGold(level, enemy), 0);
     return syncSettlementState({
         ...state,
-        crystal: killedCarrier ? recoverCrystal(state.crystal, killedCarrier.id, state.clock.tick) : state.crystal,
+        crystal: killedCarrier ? dropCrystal(state.crystal, killedCarrier, state.clock.tick, level) : state.crystal,
         resources: {
             ...state.resources,
             gold: state.resources.gold + rewardGold,
@@ -270,10 +272,12 @@ function interpolate(a, b, progress) {
         y: a.y + (b.y - a.y) * progress,
     };
 }
-function getEnemySpeed(level, enemy) {
-    const baseSpeed = level?.enemies?.find((candidate) => candidate.archetype === enemy.archetype)?.speedUnitsPerSecond ??
+function getEnemyBaseSpeed(level, enemy) {
+    return level?.enemies?.find((candidate) => candidate.archetype === enemy.archetype)?.speedUnitsPerSecond ??
         DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND;
-    return baseSpeed * getStatusSpeedMultiplier(enemy);
+}
+function getEnemySpeed(level, enemy) {
+    return getEnemyBaseSpeed(level, enemy) * getStatusSpeedMultiplier(enemy);
 }
 function getStatusSpeedMultiplier(enemy) {
     const activeStatusEffects = enemy.statusEffects?.filter((statusEffect) => statusEffect.remainingTicks > 0) ?? [];
@@ -299,12 +303,22 @@ function advanceEnemyAlongPath(enemy, level) {
     return moveEnemyAlongPath(enemy, level, remainingDistance, direction);
 }
 function moveEnemyAlongPath(enemy, level, distanceToMove, direction) {
+    const moved = movePathPosition({ pathIndex: enemy.pathIndex, progress: enemy.progress, position: enemy.position }, level, distanceToMove, direction);
+    return { ...enemy, ...moved };
+}
+function moveCrystalAlongPath(crystal, level, distanceToMove, direction) {
+    if (crystal.pathIndex === undefined || crystal.progress === undefined || !crystal.position)
+        return crystal;
+    const moved = movePathPosition({ pathIndex: crystal.pathIndex, progress: crystal.progress, position: crystal.position }, level, distanceToMove, direction);
+    return { ...crystal, ...moved };
+}
+function movePathPosition(position, level, distanceToMove, direction) {
     const path = level.path;
     if (path.length < 2 || distanceToMove <= 0)
-        return enemy;
+        return position;
     const lastSegmentIndex = path.length - 2;
-    let pathIndex = Math.max(0, Math.min(enemy.pathIndex, lastSegmentIndex));
-    let progress = Math.max(0, Math.min(enemy.progress, 1));
+    let pathIndex = Math.max(0, Math.min(position.pathIndex, lastSegmentIndex));
+    let progress = Math.max(0, Math.min(position.progress, 1));
     let remainingDistance = distanceToMove;
     while (remainingDistance > 0) {
         const segmentStart = path[pathIndex];
@@ -347,8 +361,7 @@ function moveEnemyAlongPath(enemy, level, distanceToMove, direction) {
     }
     const segmentStart = path[pathIndex] ?? path[0];
     const segmentEnd = path[pathIndex + 1] ?? path[path.length - 1];
-    const position = interpolate(segmentStart, segmentEnd, progress);
-    return { ...enemy, pathIndex, progress, position };
+    return { pathIndex, progress, position: interpolate(segmentStart, segmentEnd, progress) };
 }
 function getHeroConfig(level, hero) {
     return level?.heroConfigs?.find((candidate) => candidate.archetype === hero.archetype);
@@ -371,7 +384,7 @@ function applyTowerCombat(state, level) {
     let enemies = [...state.enemies];
     let rewardGold = 0;
     let killedCount = 0;
-    let recoveredCrystalEnemyId;
+    let killedCarrier;
     const heroes = state.heroes.map((hero) => {
         const config = getHeroConfig(level, hero);
         if (!config) {
@@ -400,7 +413,7 @@ function applyTowerCombat(state, level) {
             rewardGold += getEnemyRewardGold(level, killedEnemy);
             killedCount += 1;
             if (killedEnemy.carryingCrystal)
-                recoveredCrystalEnemyId = killedEnemy.id;
+                killedCarrier = killedEnemy;
         }
         return { ...cooledHero, attackCooldownMs: config.attackIntervalMs, targetEnemyId: target.id };
     });
@@ -412,15 +425,16 @@ function applyTowerCombat(state, level) {
             ...state.resources,
             gold: state.resources.gold + rewardGold,
         },
-        crystal: recoveredCrystalEnemyId ? recoverCrystal(state.crystal, recoveredCrystalEnemyId, state.clock.tick) : state.crystal,
+        crystal: killedCarrier ? dropCrystal(state.crystal, killedCarrier, state.clock.tick, level) : state.crystal,
         wave: killedCount > 0 && state.wave.isWaveActive
             ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + killedCount }
             : state.wave,
     });
 }
 function stealCrystal(crystal, enemyId, tick) {
+    const { position: _position, pathIndex: _pathIndex, progress: _progress, returnSpeedUnitsPerSecond: _returnSpeedUnitsPerSecond, ...withoutReturn } = crystal;
     return {
-        ...crystal,
+        ...withoutReturn,
         atBase: false,
         status: "carried",
         carrierEnemyId: enemyId,
@@ -429,22 +443,36 @@ function stealCrystal(crystal, enemyId, tick) {
         stolenCount: crystal.stolenCount + 1,
     };
 }
-function recoverCrystal(crystal, enemyId, tick) {
+function dropCrystal(crystal, carrier, tick, level) {
     const { carrierEnemyId: _carrierEnemyId, ...withoutCarrier } = crystal;
     return {
         ...withoutCarrier,
+        atBase: false,
+        status: "returning",
+        lastCarrierEnemyId: carrier.id,
+        lastDroppedEnemyId: carrier.id,
+        lastEvent: { type: "dropped", tick, enemyId: carrier.id },
+        position: carrier.position,
+        pathIndex: carrier.pathIndex,
+        progress: carrier.progress,
+        returnSpeedUnitsPerSecond: getEnemyBaseSpeed(level, carrier) * DEFAULT_CRYSTAL_RETURN_SPEED_MULTIPLIER,
+        droppedCount: crystal.droppedCount + 1,
+    };
+}
+function recoverCrystal(crystal, tick) {
+    const { carrierEnemyId: _carrierEnemyId, position: _position, pathIndex: _pathIndex, progress: _progress, returnSpeedUnitsPerSecond: _returnSpeedUnitsPerSecond, ...withoutCarrierOrReturn } = crystal;
+    return {
+        ...withoutCarrierOrReturn,
         atBase: true,
         status: "recovered",
-        lastCarrierEnemyId: enemyId,
-        lastDroppedEnemyId: enemyId,
-        lastEvent: { type: "recovered", tick, enemyId },
-        droppedCount: crystal.droppedCount + 1,
+        lastEvent: { type: "recovered", tick, enemyId: crystal.lastDroppedEnemyId ?? crystal.lastCarrierEnemyId },
         recoveredCount: crystal.recoveredCount + 1,
     };
 }
 function escapeCrystal(crystal, enemyId, tick) {
+    const { position: _position, pathIndex: _pathIndex, progress: _progress, returnSpeedUnitsPerSecond: _returnSpeedUnitsPerSecond, ...withoutReturn } = crystal;
     return {
-        ...crystal,
+        ...withoutReturn,
         atBase: false,
         status: "escaped",
         carrierEnemyId: enemyId,
@@ -453,19 +481,57 @@ function escapeCrystal(crystal, enemyId, tick) {
         escapedCount: crystal.escapedCount + 1,
     };
 }
+function advanceReturningCrystal(state, level) {
+    if (!level || (state.crystal.status !== "returning" && state.crystal.status !== "dropped")) {
+        return { crystal: state.crystal, enemies: state.enemies };
+    }
+    const immediatePickup = pickUpReturningCrystal(state.crystal, state.enemies, state.clock.tick);
+    if (immediatePickup)
+        return immediatePickup;
+    const speed = state.crystal.returnSpeedUnitsPerSecond ??
+        DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND * DEFAULT_CRYSTAL_RETURN_SPEED_MULTIPLIER;
+    const movedCrystal = moveCrystalAlongPath(state.crystal, level, speed * (state.clock.fixedDeltaMs / 1000), 1);
+    if (hasCrystalReachedAncient(movedCrystal, level)) {
+        return { crystal: recoverCrystal(movedCrystal, state.clock.tick), enemies: state.enemies };
+    }
+    return pickUpReturningCrystal(movedCrystal, state.enemies, state.clock.tick) ?? {
+        crystal: movedCrystal,
+        enemies: state.enemies,
+    };
+}
+function pickUpReturningCrystal(crystal, enemies, tick) {
+    if (!crystal.position)
+        return undefined;
+    const pickupEnemy = enemies
+        .filter((enemy) => !enemy.carryingCrystal && enemy.health > 0)
+        .filter((enemy) => distance(enemy.position, crystal.position) <= CRYSTAL_PICKUP_RADIUS)
+        .sort((a, b) => distance(a.position, crystal.position) - distance(b.position, crystal.position))[0];
+    if (!pickupEnemy)
+        return undefined;
+    return {
+        crystal: stealCrystal(crystal, pickupEnemy.id, tick),
+        enemies: enemies.map((enemy) => enemy.id === pickupEnemy.id ? { ...enemy, carryingCrystal: true } : enemy),
+    };
+}
+function hasCrystalReachedAncient(crystal, level) {
+    const lastPathSegmentIndex = Math.max(0, level.path.length - 2);
+    return (crystal.pathIndex ?? 0) >= lastPathSegmentIndex && (crystal.progress ?? 0) >= 1;
+}
 function resolveCrystalAndBase(state, advancedEnemies, level) {
     let baseHealth = state.baseHealth;
     let crystal = state.crystal;
     let status = state.status;
     const enemies = [];
+    const lastPathSegmentIndex = level?.path ? Math.max(0, level.path.length - 2) : 0;
+    const ancientPosition = level?.path[level.path.length - 1];
     for (const enemy of advancedEnemies) {
         if (enemy.carryingCrystal && enemy.pathIndex === 0 && enemy.progress <= 0) {
+            baseHealth = Math.max(0, baseHealth - 1);
             status = "lost";
             crystal = escapeCrystal(crystal, enemy.id, state.clock.tick);
             enemies.push({ ...enemy, progress: 0 });
             continue;
         }
-        const lastPathSegmentIndex = level?.path ? Math.max(0, level.path.length - 2) : 0;
         if (!enemy.carryingCrystal && enemy.progress >= 1 && enemy.pathIndex === lastPathSegmentIndex) {
             if (crystal.atBase) {
                 const carrier = { ...enemy, progress: 1, carryingCrystal: true };
@@ -473,7 +539,7 @@ function resolveCrystalAndBase(state, advancedEnemies, level) {
                 enemies.push(carrier);
             }
             else {
-                baseHealth = Math.max(0, baseHealth - 1);
+                enemies.push({ ...enemy, progress: 1, ...(ancientPosition ? { position: ancientPosition } : {}) });
             }
             continue;
         }
@@ -585,11 +651,18 @@ function advanceRunningTick(state, level) {
         wave: waveAdvanced.wave,
     };
     const combatState = applyTowerCombat(movedState, level);
-    const resolved = resolveCrystalAndBase(combatState, combatState.enemies, level);
+    const crystalAdvanced = advanceReturningCrystal(combatState, level);
+    const crystalState = {
+        ...combatState,
+        crystal: crystalAdvanced.crystal,
+        enemies: crystalAdvanced.enemies,
+    };
+    const resolved = resolveCrystalAndBase(crystalState, crystalState.enemies, level);
     const completedAllWaves = waveAdvanced.wave.totalWaves > 0 &&
         !waveAdvanced.wave.isWaveActive &&
         !waveAdvanced.wave.isWaitingNextWave &&
-        resolved.enemies.length === 0;
+        resolved.enemies.length === 0 &&
+        resolved.crystal.atBase;
     const nextStatus = completedAllWaves && resolved.status === "running" ? "won" : resolved.status;
     const nextState = {
         ...preparedState,

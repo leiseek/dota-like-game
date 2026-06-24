@@ -4,6 +4,7 @@ const LOGICAL_HEIGHT = 540;
 const MAX_SUB_STEPS_PER_FRAME = 12;
 const SNAPSHOT_KEY = "ancient-defense:web-preview:snapshot";
 const DEFAULT_HERO_ARCHETYPE = "hook-guardian";
+const FLOATING_TEXT_DURATION_MS = 900;
 const HERO_OPTIONS = [
     DEFAULT_HERO_ARCHETYPE,
     "frost-priestess",
@@ -24,7 +25,9 @@ const resumeButton = mustGet("resume-button");
 const abandonButton = mustGet("abandon-button");
 let gameState = createInitialGameState(level001Config);
 let selectedHeroId;
+let selectedEnemyId;
 let selectedHeroArchetype = DEFAULT_HERO_ARCHETYPE;
+let floatingTexts = [];
 let lastTimestamp = performance.now();
 let accumulatorMs = 0;
 startButton.addEventListener("click", () => dispatch({ type: "START" }));
@@ -63,8 +66,44 @@ function parseHeroArchetype(value) {
     return HERO_OPTIONS.find((candidate) => candidate === value) ?? DEFAULT_HERO_ARCHETYPE;
 }
 function dispatch(action) {
-    gameState = stepSimulation(enqueueAction(gameState, action), 0, level001Config);
+    setGameState(stepSimulation(enqueueAction(gameState, action), 0, level001Config));
     syncUi();
+}
+function setGameState(nextState) {
+    captureDamageNumbers(gameState, nextState);
+    gameState = nextState;
+    if (selectedHeroId && !gameState.heroes.some((hero) => hero.id === selectedHeroId)) {
+        selectedHeroId = undefined;
+    }
+    if (selectedEnemyId && !gameState.enemies.some((enemy) => enemy.id === selectedEnemyId)) {
+        selectedEnemyId = undefined;
+    }
+}
+function captureDamageNumbers(previousState, nextState) {
+    for (const previousEnemy of previousState.enemies) {
+        const nextEnemy = nextState.enemies.find((enemy) => enemy.id === previousEnemy.id);
+        const damage = nextEnemy ? previousEnemy.health - nextEnemy.health : previousEnemy.health;
+        if (damage <= 0)
+            continue;
+        const hitPosition = nextEnemy ? nextEnemy.position : previousEnemy.position;
+        addFloatingText(`-${Math.ceil(damage)}`, hitPosition);
+    }
+}
+function addFloatingText(text, position) {
+    floatingTexts = [
+        ...floatingTexts,
+        {
+            text,
+            position: { x: position.x, y: position.y - 18 },
+            ageMs: 0,
+            durationMs: FLOATING_TEXT_DURATION_MS,
+        },
+    ].slice(-24);
+}
+function updateFloatingTexts(deltaMs) {
+    floatingTexts = floatingTexts
+        .map((floatingText) => ({ ...floatingText, ageMs: floatingText.ageMs + deltaMs }))
+        .filter((floatingText) => floatingText.ageMs < floatingText.durationMs);
 }
 function runFrame(timestamp) {
     const realDeltaMs = Math.min(250, timestamp - lastTimestamp);
@@ -72,13 +111,14 @@ function runFrame(timestamp) {
     accumulatorMs += realDeltaMs;
     let subStepCount = 0;
     while (accumulatorMs >= level001Config.fixedDeltaMs && subStepCount < MAX_SUB_STEPS_PER_FRAME) {
-        gameState = stepSimulation(gameState, 1, level001Config);
+        setGameState(stepSimulation(gameState, 1, level001Config));
         accumulatorMs -= level001Config.fixedDeltaMs;
         subStepCount += 1;
     }
     if (subStepCount === MAX_SUB_STEPS_PER_FRAME) {
         accumulatorMs = 0;
     }
+    updateFloatingTexts(realDeltaMs);
     render();
     syncUi();
     requestAnimationFrame(runFrame);
@@ -88,18 +128,20 @@ function handleCanvasClick(event) {
     const clickedHero = findHeroAt(point);
     if (clickedHero) {
         selectedHeroId = clickedHero.id;
-        setMessage(`Selected hero: ${clickedHero.archetype}`);
+        setMessage(`Selected hero: ${clickedHero.archetype}. Click an enemy to cast its active skill.`);
         syncUi();
         return;
     }
     const clickedEnemy = findEnemyAt(point);
     if (clickedEnemy) {
+        selectedEnemyId = clickedEnemy.id;
         if (!selectedHeroId) {
-            setMessage("Select a hero before casting an active skill.");
+            setMessage(`Selected enemy: ${clickedEnemy.archetype}. Select a hero, then click an enemy to cast skill.`);
+            syncUi();
             return;
         }
-        dispatch({ type: "CAST_SKILL", heroId: selectedHeroId, targetEnemyId: clickedEnemy.id });
-        setMessage(`Cast skill on ${clickedEnemy.archetype}.`);
+        castSelectedHeroSkill(clickedEnemy);
+        syncUi();
         return;
     }
     const clickedSlot = findTowerSlotAt(point);
@@ -110,7 +152,7 @@ function handleCanvasClick(event) {
         }
         if (clickedSlot.occupiedByHeroId) {
             selectedHeroId = clickedSlot.occupiedByHeroId;
-            setMessage(`Selected hero: ${clickedSlot.occupiedByHeroId}`);
+            setMessage(`Selected hero: ${clickedSlot.occupiedByHeroId}. Click an enemy to cast its active skill.`);
             syncUi();
             return;
         }
@@ -118,12 +160,34 @@ function handleCanvasClick(event) {
         const builtHero = gameState.heroes.find((hero) => hero.slotId === clickedSlot.id);
         if (builtHero) {
             selectedHeroId = builtHero.id;
-            setMessage(`Built ${builtHero.archetype} at ${clickedSlot.id}.`);
+            setMessage(`Built ${builtHero.archetype} at ${clickedSlot.id}. Click an enemy to cast its skill.`);
         }
         else {
             setMessage(`Could not build ${selectedHeroArchetype}; check gold and slot state.`);
         }
         syncUi();
+    }
+}
+function castSelectedHeroSkill(target) {
+    const hero = gameState.heroes.find((candidate) => candidate.id === selectedHeroId);
+    if (!hero) {
+        setMessage("Select a hero before casting an active skill.");
+        return;
+    }
+    const beforeMana = gameState.resources.manaCrystal;
+    const beforeCooldown = hero.cooldownTicksRemaining;
+    const beforeTargetHealth = target.health;
+    dispatch({ type: "CAST_SKILL", heroId: hero.id, targetEnemyId: target.id });
+    const afterHero = gameState.heroes.find((candidate) => candidate.id === hero.id);
+    const afterTarget = gameState.enemies.find((enemy) => enemy.id === target.id);
+    const didSpendMana = gameState.resources.manaCrystal < beforeMana;
+    const didStartCooldown = (afterHero?.cooldownTicksRemaining ?? 0) > beforeCooldown;
+    const didDamageTarget = !afterTarget || afterTarget.health < beforeTargetHealth;
+    if (didSpendMana || didStartCooldown || didDamageTarget) {
+        setMessage(`${hero.archetype} cast ${skillLabel(hero)} on ${target.archetype}.`);
+    }
+    else {
+        setMessage(`Skill did not cast. Check cooldown, mana, and target validity.`);
     }
 }
 function toLogicalPoint(event) {
@@ -160,6 +224,8 @@ function continueSavedBattle() {
         const snapshot = JSON.parse(snapshotJson);
         gameState = restoreSnapshot(snapshot);
         selectedHeroId = undefined;
+        selectedEnemyId = undefined;
+        floatingTexts = [];
         accumulatorMs = 0;
         setMessage("Saved battle restored into paused state.");
         syncUi();
@@ -196,6 +262,10 @@ function crystalStatusLabel(status) {
             return "safe";
         case "carried":
             return "stolen";
+        case "dropped":
+            return "dropped";
+        case "returning":
+            return "returning";
         case "recovered":
             return "recovered";
         case "escaped":
@@ -218,7 +288,10 @@ function render() {
     drawTowerSlots();
     drawHeroes();
     drawEnemies();
+    drawReturningCrystal();
+    drawFloatingTexts();
     drawOverlayText();
+    drawSelectionPanel();
     drawSettlementPanel();
 }
 function clearCanvas() {
@@ -313,6 +386,14 @@ function drawHeroes() {
 }
 function drawEnemies() {
     for (const enemy of gameState.enemies) {
+        const selected = enemy.id === selectedEnemyId;
+        if (selected) {
+            context.beginPath();
+            context.arc(enemy.position.x, enemy.position.y, 19, 0, Math.PI * 2);
+            context.strokeStyle = "#ffffff";
+            context.lineWidth = 2;
+            context.stroke();
+        }
         context.beginPath();
         context.arc(enemy.position.x, enemy.position.y, enemy.carryingCrystal ? 14 : 11, 0, Math.PI * 2);
         context.fillStyle = enemy.carryingCrystal ? "#ff7a59" : "#ff4f6d";
@@ -339,15 +420,121 @@ function drawEnemies() {
         }
     }
 }
+function drawReturningCrystal() {
+    const crystal = gameState.crystal;
+    if ((crystal.status !== "returning" && crystal.status !== "dropped") || !crystal.position)
+        return;
+    context.save();
+    context.strokeStyle = "rgba(255, 226, 138, 0.45)";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(crystal.position.x, crystal.position.y, 18, 0, Math.PI * 2);
+    context.stroke();
+    context.fillStyle = "#ffe28a";
+    context.beginPath();
+    context.moveTo(crystal.position.x, crystal.position.y - 15);
+    context.lineTo(crystal.position.x + 10, crystal.position.y);
+    context.lineTo(crystal.position.x, crystal.position.y + 15);
+    context.lineTo(crystal.position.x - 10, crystal.position.y);
+    context.closePath();
+    context.fill();
+    drawLabel({ x: crystal.position.x, y: crystal.position.y - 24 }, "RETURN", "#ffe28a");
+    context.restore();
+}
+function drawFloatingTexts() {
+    context.save();
+    context.font = "bold 18px system-ui, sans-serif";
+    context.textAlign = "center";
+    for (const floatingText of floatingTexts) {
+        const ratio = floatingText.ageMs / floatingText.durationMs;
+        context.globalAlpha = Math.max(0, 1 - ratio);
+        context.fillStyle = "#fff1a8";
+        context.fillText(floatingText.text, floatingText.position.x, floatingText.position.y - ratio * 32);
+    }
+    context.restore();
+}
 function drawOverlayText() {
     context.save();
     context.fillStyle = "rgba(0, 0, 0, 0.34)";
-    context.fillRect(16, 456, 520, 68);
+    context.fillRect(16, 456, 560, 68);
     context.fillStyle = "rgba(255,255,255,0.86)";
     context.font = "16px system-ui, sans-serif";
-    context.fillText("Click slot: build · Click hero: select · Click enemy: cast skill", 32, 486);
-    context.fillText(`Selected hero: ${selectedHeroId ?? "none"} · Crystal ${gameState.crystal.status}`, 32, 512);
+    context.fillText("Click slot: build · Click hero: select · Click enemy: inspect / cast selected hero skill", 32, 486);
+    context.fillText(`Selected hero: ${selectedHeroId ?? "none"} · Selected enemy: ${selectedEnemyId ?? "none"} · Crystal ${gameState.crystal.status}`, 32, 512);
     context.restore();
+}
+function drawSelectionPanel() {
+    const selectedHero = selectedHeroId ? gameState.heroes.find((hero) => hero.id === selectedHeroId) : undefined;
+    const selectedEnemy = selectedEnemyId ? gameState.enemies.find((enemy) => enemy.id === selectedEnemyId) : undefined;
+    if (!selectedHero && !selectedEnemy)
+        return;
+    const panelHeight = selectedHero && selectedEnemy ? 266 : 170;
+    context.save();
+    context.fillStyle = "rgba(0, 0, 0, 0.58)";
+    context.fillRect(620, 16, 324, panelHeight);
+    context.strokeStyle = "rgba(255, 255, 255, 0.24)";
+    context.lineWidth = 1.5;
+    context.strokeRect(620, 16, 324, panelHeight);
+    let nextY = 44;
+    if (selectedHero) {
+        nextY = drawHeroPanel(selectedHero, 638, nextY);
+    }
+    if (selectedEnemy) {
+        drawEnemyPanel(selectedEnemy, 638, nextY + (selectedHero ? 12 : 0));
+    }
+    context.restore();
+}
+function drawHeroPanel(hero, x, y) {
+    const config = level001Config.heroConfigs?.find((candidate) => candidate.archetype === hero.archetype);
+    drawPanelLine(x, y, `Hero: ${hero.archetype}`, "#dcecff", true);
+    drawPanelLine(x, y + 22, `HP ${hero.health}/${hero.maxHealth} · Cost ${hero.totalCost}`, "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 44, `Attack ${config?.attackDamage ?? "?"} · Range ${config?.attackRange ?? "?"}`, "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 66, `Skill ${skillLabel(hero)} · Mana ${config?.skillManaCost ?? 0}`, "#ffe28a");
+    drawPanelLine(x, y + 88, `Damage ${config?.skillDamage ?? "?"} · CD ${hero.cooldownTicksRemaining}`, "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 110, "Operation: click enemy to cast", "#9ad1ff");
+    return y + 132;
+}
+function drawEnemyPanel(enemy, x, y) {
+    const config = level001Config.enemies?.find((candidate) => candidate.archetype === enemy.archetype);
+    drawPanelLine(x, y, `Enemy: ${enemy.archetype}`, "#ffd1dc", true);
+    drawPanelLine(x, y + 22, `HP ${enemy.health}/${enemy.maxHealth} · Reward ${config?.rewardGold ?? 0}`, "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 44, `Speed ${config?.speedUnitsPerSecond ?? "?"} · Path ${enemyPathLabel(enemy)}`, "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 66, `State ${enemy.carryingCrystal ? "carrying crystal" : "advancing"}`, enemy.carryingCrystal ? "#ffe28a" : "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 88, `Buffs ${statusEffectsLabel(enemy)}`, "#bff8ff");
+    drawPanelLine(x, y + 110, "Skill: steal crystal, escape to Start", "rgba(255,255,255,0.86)");
+}
+function drawPanelLine(x, y, text, color, bold = false) {
+    context.fillStyle = color;
+    context.font = `${bold ? "bold " : ""}14px system-ui, sans-serif`;
+    context.textAlign = "left";
+    context.fillText(text, x, y);
+}
+function skillLabel(hero) {
+    const config = level001Config.heroConfigs?.find((candidate) => candidate.archetype === hero.archetype);
+    switch (config?.skillKind ?? "direct-damage") {
+        case "hook":
+            return "Hook / pull + stun carrier";
+        case "frost":
+            return "Frost AoE slow";
+        case "storm-chain":
+            return "Storm chain lightning";
+        case "moonblade":
+            return "Moonblade bounce";
+        case "direct-damage":
+            return "Direct damage";
+    }
+    return "Direct damage";
+}
+function enemyPathLabel(enemy) {
+    return `${(enemy.pathIndex + enemy.progress).toFixed(2)}`;
+}
+function statusEffectsLabel(enemy) {
+    const effects = enemy.statusEffects?.filter((statusEffect) => statusEffect.remainingTicks > 0) ?? [];
+    if (effects.length === 0)
+        return "none";
+    return effects
+        .map((statusEffect) => `${statusEffect.type}:${statusEffect.remainingTicks}`)
+        .join(", ");
 }
 function drawSettlementPanel() {
     if (!gameState.settlement.isComplete)

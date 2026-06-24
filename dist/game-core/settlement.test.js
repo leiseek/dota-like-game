@@ -47,7 +47,7 @@ test("victory star rating scales from remaining crystals", () => {
     assert.equal(oneStar.settlement.stars, 1);
     assert.equal(oneStar.settlement.remainingCrystals, 1);
 });
-test("carrier escape creates a zero-star defeat settlement", () => {
+test("carrier escape creates a zero-star defeat settlement after deducting one crystal", () => {
     const shortLevel = {
         ...tutorialLevel,
         fixedDeltaMs: 100,
@@ -67,27 +67,41 @@ test("carrier escape creates a zero-star defeat settlement", () => {
         maxHealth: 50,
         carryingCrystal: false,
     };
-    const primed = enqueueAction(enqueueAction(enqueueAction(createInitialGameState(shortLevel), { type: "START" }), { type: "SET_SPEED", speed: 10 }), { type: "SPAWN_ENEMY", enemy });
+    const initial = createInitialGameState(shortLevel);
+    const primed = enqueueAction(enqueueAction(enqueueAction(initial, { type: "START" }), { type: "SET_SPEED", speed: 10 }), { type: "SPAWN_ENEMY", enemy });
     const escaped = stepSimulation(primed, 1, shortLevel);
     assert.equal(escaped.status, "lost");
+    assert.equal(escaped.baseHealth, initial.baseHealth - 1);
     assert.equal(escaped.settlement.outcome, "defeat");
     assert.equal(escaped.settlement.reason, "crystal-escaped");
     assert.equal(escaped.settlement.stars, 0);
+    assert.equal(escaped.settlement.remainingCrystals, initial.baseHealth - 1);
     assert.equal(escaped.settlement.escapedCrystals, 1);
 });
-test("base crystal depletion creates a zero-star defeat settlement", () => {
-    const initial = createInitialGameState({ ...tutorialLevel, baseHealth: 1 });
-    const extraEnemy = {
-        id: "enemy-2",
-        archetype: "runner",
-        pathIndex: 1,
-        progress: 0.95,
-        position: { x: 9.75, y: 3.8 },
-        health: 50,
-        maxHealth: 50,
-        carryingCrystal: false,
+test("cleared waves do not settle while a dropped crystal is still returning", () => {
+    const returnLevel = {
+        ...tutorialLevel,
+        fixedDeltaMs: 1_000,
+        baseHealth: 10,
+        path: [
+            { x: 0, y: 0 },
+            { x: 100, y: 0 },
+        ],
+        enemies: [{ archetype: "runner", maxHealth: 25, speedUnitsPerSecond: 20, rewardGold: 1 }],
+        waves: [{ id: "wave-01", startsAtMs: 0, spawnGroups: [] }],
     };
-    const depleted = stepSimulation(enqueueAction({
+    const carrier = {
+        id: "enemy-1",
+        archetype: "runner",
+        pathIndex: 0,
+        progress: 0.5,
+        position: { x: 50, y: 0 },
+        health: 25,
+        maxHealth: 25,
+        carryingCrystal: true,
+    };
+    const initial = createInitialGameState(returnLevel);
+    const withCarrier = {
         ...initial,
         status: "running",
         clock: { ...initial.clock, paused: false },
@@ -95,15 +109,25 @@ test("base crystal depletion creates a zero-star defeat settlement", () => {
             ...initial.crystal,
             atBase: false,
             status: "carried",
-            carrierEnemyId: "enemy-1",
-            lastCarrierEnemyId: "enemy-1",
-            lastEvent: { type: "stolen", tick: 0, enemyId: "enemy-1" },
+            carrierEnemyId: carrier.id,
+            lastCarrierEnemyId: carrier.id,
+            lastEvent: { type: "stolen", tick: 0, enemyId: carrier.id },
             stolenCount: 1,
         },
-    }, { type: "SPAWN_ENEMY", enemy: extraEnemy }), 1, tutorialLevel);
-    assert.equal(depleted.status, "lost");
-    assert.equal(depleted.settlement.outcome, "defeat");
-    assert.equal(depleted.settlement.reason, "base-crystals-depleted");
-    assert.equal(depleted.settlement.stars, 0);
-    assert.equal(depleted.settlement.remainingCrystals, 0);
+        enemies: [carrier],
+        wave: {
+            ...initial.wave,
+            totalWaves: 1,
+            isWaveActive: false,
+            isWaitingNextWave: false,
+        },
+    };
+    const returning = stepSimulation(enqueueAction(withCarrier, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }), 0, returnLevel);
+    assert.equal(returning.status, "running");
+    assert.equal(returning.settlement.outcome, "pending");
+    assert.equal(returning.crystal.status, "returning");
+    const completed = stepSimulation(returning, 6, returnLevel);
+    assert.equal(completed.status, "won");
+    assert.equal(completed.settlement.outcome, "victory");
+    assert.equal(completed.crystal.status, "recovered");
 });

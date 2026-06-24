@@ -95,17 +95,19 @@ test("active skills reject invalid targets, cooldown recasts, and insufficient m
     assert.equal(rejectedLowMana.resources.manaCrystal, 34);
     assert.equal(rejectedLowMana.enemies[0]?.health, 100);
 });
-test("enemies steal the crystal and lose after carrying it away", () => {
+test("enemies steal the crystal without deducting it until they escape", () => {
     const initial = createInitialGameState(tutorialLevel);
     const withEnemy = enqueueAction(enqueueAction(initial, { type: "START" }), { type: "SPAWN_ENEMY", enemy });
     const atCrystal = stepSimulation(withEnemy, 20);
+    assert.equal(atCrystal.baseHealth, initial.baseHealth);
     assert.equal(atCrystal.crystal.atBase, false);
     assert.equal(atCrystal.crystal.carrierEnemyId, "enemy-1");
     assert.equal(atCrystal.enemies[0]?.carryingCrystal, true);
     const escapedWithCrystal = stepSimulation(atCrystal, 20);
     assert.equal(escapedWithCrystal.status, "lost");
+    assert.equal(escapedWithCrystal.baseHealth, initial.baseHealth - 1);
 });
-test("killing a crystal carrier returns the crystal to base", () => {
+test("killing a crystal carrier starts a returning crystal instead of instant recovery", () => {
     const initial = createInitialGameState(tutorialLevel);
     const strongEnemy = { ...enemy, health: 25, maxHealth: 25 };
     const withEnemy = enqueueAction(enqueueAction(initial, { type: "START" }), {
@@ -114,8 +116,11 @@ test("killing a crystal carrier returns the crystal to base", () => {
     });
     const carrier = stepSimulation(withEnemy, 20);
     const afterSkill = stepSimulation(enqueueAction(carrier, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }));
-    assert.equal(afterSkill.crystal.atBase, true);
+    assert.equal(afterSkill.baseHealth, initial.baseHealth);
+    assert.equal(afterSkill.crystal.atBase, false);
+    assert.equal(afterSkill.crystal.status, "returning");
     assert.equal(afterSkill.crystal.carrierEnemyId, undefined);
+    assert.equal(afterSkill.crystal.lastDroppedEnemyId, "enemy-1");
     assert.equal(afterSkill.enemies.length, 0);
 });
 test("level 001 config exposes the documented 10 waves", () => {

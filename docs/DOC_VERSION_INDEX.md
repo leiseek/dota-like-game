@@ -11,7 +11,7 @@ change_summary: v0.4.0 Web Playtest Preview documentation updates
 
 | Document | Version | Status | Owner Agent | Latest Change |
 |---|---:|---|---|---|
-| AGENTS.md | 0.3.0 | active | AI Workflow Agent | Codex project-level instructions |
+| AGENTS.md | 0.4.0 | active | AI Workflow Agent | Web Preview phase and platform boundary added |
 | CODEX_HANDOFF.md | 0.3.0 | active | AI Workflow Agent | Codex task handoff |
 | GDD.md | 0.2.0 | active | Game Director Agent | First level and core system design |
 | MVP_SCOPE.md | 0.1.0 | active | Executive Producer Agent | Demo 0.1 scope |

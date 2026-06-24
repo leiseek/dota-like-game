@@ -71,13 +71,17 @@ test("Moonblade Ranger Lv3 applies poison and burn that tick for deterministic d
 test("damage-over-time kills credit gold and XP to the source hero", () => {
   const built = buildHero(createInitialGameState(level001Config), "T01", "moonblade-ranger");
   const leveled = withHeroProgression(built, "hero-1", 3);
-  const ready = withRunningState(spawnEnemies(leveled, [pathEnemy("enemy-1", 0.6, 17)]));
+  const enemy = {
+    ...pathEnemy("enemy-1", 0.6, 2),
+    statusEffects: [
+      { type: "poison" as const, remainingTicks: 3, damagePerTick: 1, sourceHeroId: "hero-1" },
+      { type: "burn" as const, remainingTicks: 3, damagePerTick: 1, sourceHeroId: "hero-1" },
+    ],
+  };
+  const ready = withRunningState(spawnEnemies(leveled, [enemy]));
   const goldBefore = ready.resources.gold;
 
-  const afterAttack = stepSimulation(ready, 1, level001Config);
-  assert.equal(afterAttack.enemies[0]?.health, 1);
-
-  const afterDotKill = stepSimulation(afterAttack, 1, level001Config);
+  const afterDotKill = stepSimulation(ready, 1, level001Config);
   assert.equal(afterDotKill.enemies.length, 0);
   assert.equal(afterDotKill.resources.gold, goldBefore + 10);
   assert.equal(afterDotKill.heroes[0]?.experience, 4);

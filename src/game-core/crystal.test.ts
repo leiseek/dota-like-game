@@ -77,15 +77,14 @@ test("initial crystal state is safe and exposed through HUD", () => {
   assert.equal(hud.crystal.stolenCount, 0);
 });
 
-test("stealing the crystal records carried state and stolen event", () => {
-  const withEnemy = enqueueAction(
-    enqueueAction(createInitialGameState(tutorialLevel), { type: "START" }),
-    { type: "SPAWN_ENEMY", enemy: nearCrystalEnemy },
-  );
+test("stealing the crystal records carried state and stolen event without deducting crystals", () => {
+  const initial = createInitialGameState(tutorialLevel);
+  const withEnemy = enqueueAction(enqueueAction(initial, { type: "START" }), { type: "SPAWN_ENEMY", enemy: nearCrystalEnemy });
 
   const stolen = stepSimulation(withEnemy, 1, tutorialLevel);
   const hud = selectHudState(stolen);
 
+  assert.equal(stolen.baseHealth, initial.baseHealth);
   assert.equal(stolen.crystal.atBase, false);
   assert.equal(stolen.crystal.status, "carried");
   assert.equal(stolen.crystal.carrierEnemyId, "enemy-1");
@@ -104,6 +103,7 @@ test("killing a crystal carrier drops a returning crystal instead of instant rec
   );
   const hud = selectHudState(dropped);
 
+  assert.equal(dropped.baseHealth, straightLevel.baseHealth);
   assert.equal(dropped.crystal.atBase, false);
   assert.equal(dropped.crystal.status, "returning");
   assert.equal(dropped.crystal.carrierEnemyId, undefined);
@@ -120,7 +120,7 @@ test("killing a crystal carrier drops a returning crystal instead of instant rec
   assert.equal(hud.crystal.position?.x, 50);
 });
 
-test("a returning crystal moves toward the Ancient at half monster speed and then recovers", () => {
+test("a returning crystal moves toward the Ancient at half monster speed and then recovers without deducting crystals", () => {
   const dropped = stepSimulation(
     enqueueAction(runningStateWithCarrier(carrierAtHalfPath()), { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }),
     0,
@@ -128,11 +128,13 @@ test("a returning crystal moves toward the Ancient at half monster speed and the
   );
 
   const moving = stepSimulation(dropped, 1, straightLevel);
+  assert.equal(moving.baseHealth, straightLevel.baseHealth);
   assert.equal(moving.crystal.status, "returning");
   assert.equal(moving.crystal.position?.x, 60);
   assert.equal(moving.crystal.progress, 0.6);
 
   const recovered = stepSimulation(dropped, 5, straightLevel);
+  assert.equal(recovered.baseHealth, straightLevel.baseHealth);
   assert.equal(recovered.crystal.status, "recovered");
   assert.equal(recovered.crystal.atBase, true);
   assert.equal(recovered.crystal.position, undefined);
@@ -140,7 +142,7 @@ test("a returning crystal moves toward the Ancient at half monster speed and the
   assert.equal(recovered.crystal.lastEvent?.type, "recovered");
 });
 
-test("a monster can intercept a returning crystal and immediately become the new carrier", () => {
+test("a monster can intercept a returning crystal and immediately become the new carrier without deducting crystals", () => {
   const dropped = stepSimulation(
     enqueueAction(runningStateWithCarrier(carrierAtHalfPath()), { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }),
     0,
@@ -160,6 +162,7 @@ test("a monster can intercept a returning crystal and immediately become the new
   const intercepted = stepSimulation({ ...dropped, enemies: [chaser] }, 1, straightLevel);
   const newCarrier = intercepted.enemies.find((enemy) => enemy.id === "enemy-2");
 
+  assert.equal(intercepted.baseHealth, straightLevel.baseHealth);
   assert.equal(intercepted.crystal.status, "carried");
   assert.equal(intercepted.crystal.carrierEnemyId, "enemy-2");
   assert.equal(intercepted.crystal.stolenCount, 2);
@@ -210,7 +213,7 @@ test("endpoint monsters wait instead of disappearing while the crystal is unavai
   assert.equal(waiting.enemies[0]?.progress, 1);
 });
 
-test("a carrier escaping with the crystal records escaped state", () => {
+test("a carrier escaping with the crystal deducts exactly one crystal at the start", () => {
   const shortLevel = {
     ...tutorialLevel,
     fixedDeltaMs: 100,
@@ -220,9 +223,10 @@ test("a carrier escaping with the crystal records escaped state", () => {
     ],
     enemies: [{ archetype: "runner", maxHealth: 50, speedUnitsPerSecond: 100, rewardGold: 1 }],
   };
+  const initial = createInitialGameState(shortLevel);
   const enemy = { ...nearCrystalEnemy, pathIndex: 0, progress: 0, position: shortLevel.path[0]!, health: 50, maxHealth: 50 };
   const primed = enqueueAction(
-    enqueueAction(enqueueAction(createInitialGameState(shortLevel), { type: "START" }), { type: "SET_SPEED", speed: 10 }),
+    enqueueAction(enqueueAction(initial, { type: "START" }), { type: "SET_SPEED", speed: 10 }),
     { type: "SPAWN_ENEMY", enemy },
   );
 
@@ -230,11 +234,13 @@ test("a carrier escaping with the crystal records escaped state", () => {
   const hud = selectHudState(escaped);
 
   assert.equal(escaped.status, "lost");
+  assert.equal(escaped.baseHealth, initial.baseHealth - 1);
   assert.equal(escaped.crystal.status, "escaped");
   assert.equal(escaped.crystal.carrierEnemyId, "enemy-1");
   assert.equal(escaped.crystal.lastEvent?.type, "escaped");
   assert.equal(escaped.crystal.stolenCount, 1);
   assert.equal(escaped.crystal.escapedCount, 1);
+  assert.equal(escaped.settlement.remainingCrystals, initial.baseHealth - 1);
   assert.equal(hud.crystal.status, "escaped");
   assert.equal(hud.crystal.lastEventType, "escaped");
 });

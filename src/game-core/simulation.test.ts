@@ -283,4 +283,182 @@ test("enemies traverse all path segments before stealing the crystal", () => {
   assert.equal(finalEndpoint.enemies[0]?.progress, 1);
   assert.deepEqual(finalEndpoint.enemies[0]?.position, { x: 10, y: 4 });
   assert.equal(finalEndpoint.enemies[0]?.carryingCrystal, true);
+  assert.equal(finalEndpoint.crystal.carrierEnemyId, "enemy-1");
+});
+
+test("10x path movement clamps to endpoints without skipping crystal theft", () => {
+  const shortLevel = {
+    ...tutorialLevel,
+    fixedDeltaMs: 100,
+    path: [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+    ],
+    enemies: [{ archetype: "runner", maxHealth: 50, speedUnitsPerSecond: 100, rewardGold: 1 }],
+  };
+  const shortEnemy = { ...enemy, position: shortLevel.path[0]! };
+  const primed = enqueueAction(
+    enqueueAction(enqueueAction(createInitialGameState(shortLevel), { type: "START" }), { type: "SET_SPEED", speed: 10 }),
+    { type: "SPAWN_ENEMY", enemy: shortEnemy },
+  );
+
+  const escaped = stepSimulation(primed, 1, shortLevel);
+  assert.equal(escaped.enemies[0]?.pathIndex, 0);
+  assert.equal(escaped.enemies[0]?.progress, 0);
+  assert.deepEqual(escaped.enemies[0]?.position, { x: 0, y: 0 });
+  assert.equal(escaped.enemies[0]?.carryingCrystal, true);
+  assert.equal(escaped.crystal.carrierEnemyId, "enemy-1");
+  assert.equal(escaped.status, "lost");
+});
+
+test("BUILD_HERO spends gold and occupies an unlocked tower slot", () => {
+  const initial = createInitialGameState(level001Config);
+  const built = stepSimulation(
+    enqueueAction(initial, { type: "BUILD_HERO", slotId: "T01", heroArchetype: "hook-guardian" }),
+    1,
+    level001Config,
+  );
+
+  assert.equal(built.resources.gold, 180);
+  assert.equal(built.heroes.length, 1);
+  assert.equal(built.heroes[0]?.archetype, "hook-guardian");
+  assert.equal(built.heroes[0]?.slotId, "T01");
+  assert.equal(built.heroes[0]?.totalCost, 120);
+  assert.deepEqual(built.heroes[0]?.position, { x: 150, y: 190 });
+  assert.equal(built.towerSlots.find((slot) => slot.id === "T01")?.occupiedByHeroId, "hero-1");
+});
+
+test("BUILD_HERO rejects locked, occupied, unknown, and unaffordable builds", () => {
+  const initial = createInitialGameState(level001Config);
+  const locked = stepSimulation(
+    enqueueAction(initial, { type: "BUILD_HERO", slotId: "T09", heroArchetype: "hook-guardian" }),
+    1,
+    level001Config,
+  );
+  assert.equal(locked.heroes.length, 0);
+  assert.equal(locked.resources.gold, 300);
+
+  const built = stepSimulation(
+    enqueueAction(initial, { type: "BUILD_HERO", slotId: "T01", heroArchetype: "storm-sigilist" }),
+    1,
+    level001Config,
+  );
+  const occupied = stepSimulation(
+    enqueueAction(built, { type: "BUILD_HERO", slotId: "T01", heroArchetype: "frost-priestess" }),
+    1,
+    level001Config,
+  );
+  assert.equal(occupied.heroes.length, 1);
+  assert.equal(occupied.resources.gold, 160);
+
+  const unknownHero = stepSimulation(
+    enqueueAction(initial, { type: "BUILD_HERO", slotId: "T02", heroArchetype: "unknown-hero" }),
+    1,
+    level001Config,
+  );
+  assert.equal(unknownHero.heroes.length, 0);
+  assert.equal(unknownHero.resources.gold, 300);
+
+  const twoBuilt = stepSimulation(
+    enqueueAction(
+      enqueueAction(built, { type: "BUILD_HERO", slotId: "T02", heroArchetype: "storm-sigilist" }),
+      { type: "BUILD_HERO", slotId: "T03", heroArchetype: "hook-guardian" },
+    ),
+    1,
+    level001Config,
+  );
+  assert.equal(twoBuilt.heroes.length, 2);
+  assert.equal(twoBuilt.resources.gold, 20);
+  assert.equal(twoBuilt.towerSlots.find((slot) => slot.id === "T03")?.occupiedByHeroId, undefined);
+});
+
+test("hero towers auto-target enemies in range, attack, kill, and award gold", () => {
+  const combatLevel = {
+    ...tutorialLevel,
+    startingHeroes: [
+      {
+        archetype: "test-hero",
+        position: { x: 0, y: 0 },
+        health: 100,
+        maxHealth: 100,
+      },
+    ],
+    heroConfigs: [{ archetype: "test-hero", buildCost: 0, maxHealth: 100, attackDamage: 10, attackIntervalMs: 1000, attackRange: 100 }],
+    enemies: [{ archetype: "runner", maxHealth: 10, speedUnitsPerSecond: 1, rewardGold: 5 }],
+  };
+  const target = { ...enemy, health: 10, maxHealth: 10, position: { x: 10, y: 0 } };
+  const withEnemy = enqueueAction(enqueueAction(createInitialGameState(combatLevel), { type: "START" }), {
+    type: "SPAWN_ENEMY",
+    enemy: target,
+  });
+
+  const afterAttack = stepSimulation(withEnemy, 1, combatLevel);
+  assert.equal(afterAttack.enemies.length, 0);
+  assert.equal(afterAttack.resources.gold, 305);
+  assert.equal(afterAttack.heroes[0]?.targetEnemyId, "enemy-1");
+  assert.equal(afterAttack.heroes[0]?.attackCooldownMs, 1000);
+});
+
+test("tower kills during active waves increment wave kill count and allow wave completion", () => {
+  const combatWaveLevel = {
+    ...tutorialLevel,
+    startingHeroes: [
+      {
+        archetype: "test-hero",
+        position: { x: 0, y: 0 },
+        health: 100,
+        maxHealth: 100,
+      },
+    ],
+    heroConfigs: [{ archetype: "test-hero", buildCost: 0, maxHealth: 100, attackDamage: 10, attackIntervalMs: 1000, attackRange: 100 }],
+    enemies: [{ archetype: "runner", maxHealth: 10, speedUnitsPerSecond: 1, rewardGold: 5 }],
+    waves: [{ id: "wave-01", startsAtMs: 0, spawnGroups: [{ enemyArchetype: "runner", count: 1, intervalMs: 100 }] }],
+  };
+  const spawnedAndKilled = stepSimulation(
+    enqueueAction(enqueueAction(createInitialGameState(combatWaveLevel), { type: "START" }), { type: "START_NEXT_WAVE" }),
+    1,
+    combatWaveLevel,
+  );
+  const completed = stepSimulation(spawnedAndKilled, 1, combatWaveLevel);
+
+  assert.equal(spawnedAndKilled.enemies.length, 0);
+  assert.equal(spawnedAndKilled.wave.killedCountInWave, 1);
+  assert.equal(spawnedAndKilled.resources.gold, 305);
+  assert.equal(completed.status, "won");
+});
+
+test("HUD selector exposes top bar resources, wave, pause, and speed state", () => {
+  const initial = createInitialGameState(level001Config);
+  const hud = selectHudState(initial);
+
+  assert.equal(hud.crystals, 12);
+  assert.equal(hud.maxCrystals, 12);
+  assert.equal(hud.gold, 300);
+  assert.equal(hud.manaCrystal, 100);
+  assert.equal(hud.wave.currentWave, 1);
+  assert.equal(hud.wave.totalWaves, 10);
+  assert.equal(hud.isPaused, true);
+  assert.equal(hud.speed, 1);
+  assert.deepEqual(hud.speedOptions.map((option) => option.speed), [1, 2, 5, 10]);
+  assert.equal(hud.speedOptions.find((option) => option.speed === 1)?.isActive, true);
+  assert.equal(hud.canPause, false);
+  assert.equal(hud.canResume, false);
+  assert.equal(hud.canStartNextWave, false);
+});
+
+test("HUD selector reflects running controls without owning battle state", () => {
+  const running = stepSimulation(
+    enqueueAction(enqueueAction(createInitialGameState(level001Config), { type: "START" }), { type: "SET_SPEED", speed: 10 }),
+    0,
+    level001Config,
+  );
+  const hud = selectHudState(running);
+
+  assert.equal(hud.status, "running");
+  assert.equal(hud.isPaused, false);
+  assert.equal(hud.speed, 10);
+  assert.equal(hud.speedOptions.find((option) => option.speed === 10)?.isActive, true);
+  assert.equal(hud.canPause, true);
+  assert.equal(hud.canResume, false);
+  assert.equal(hud.canStartNextWave, true);
 });

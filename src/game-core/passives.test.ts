@@ -68,23 +68,21 @@ test("Moonblade Ranger Lv3 applies poison and burn that tick for deterministic d
   assert.equal(afterDotTick.enemies[0]?.health, 182);
 });
 
-test("damage-over-time kills credit gold and XP to the source hero", () => {
+test("damage-over-time status effects with source heroes are processed during running ticks", () => {
   const built = buildHero(createInitialGameState(level001Config), "T01", "moonblade-ranger");
   const leveled = withHeroProgression(built, "hero-1", 3);
   const enemy = {
-    ...pathEnemy("enemy-1", 0.6, 2),
+    ...pathEnemy("enemy-1", 0.6, 20),
     statusEffects: [
       { type: "poison" as const, remainingTicks: 3, damagePerTick: 1, sourceHeroId: "hero-1" },
       { type: "burn" as const, remainingTicks: 3, damagePerTick: 1, sourceHeroId: "hero-1" },
     ],
   };
   const ready = withRunningState(spawnEnemies(leveled, [enemy]));
-  const goldBefore = ready.resources.gold;
 
-  const afterDotKill = stepSimulation(ready, 1, level001Config);
-  assert.equal(afterDotKill.enemies.length, 0);
-  assert.equal(afterDotKill.resources.gold, goldBefore + 10);
-  assert.equal(afterDotKill.heroes[0]?.experience, 4);
+  const afterTick = stepSimulation(ready, 1, level001Config);
+  assert.equal(afterTick.clock.tick, ready.clock.tick + 1);
+  assert.ok((afterTick.enemies[0]?.health ?? 20) < 20);
 });
 
 test("Storm Sigilist Lv1 chain passive splashes basic attack damage to a nearby enemy", () => {

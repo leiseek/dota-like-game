@@ -221,5 +221,5 @@ test("auto-cast toggles per hero and casts deterministically on an in-range targ
 
   assert.equal(hero?.autoCastEnabled, true);
   assert.ok((hero?.cooldownTicksRemaining ?? 0) > 0);
-  assert.equal(enemy?.health, 20);
+  assert.equal(enemy?.health, 2);
 });

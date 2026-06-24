@@ -1,13 +1,38 @@
 ---
 doc_id: CHANGELOG
-version: 0.4.0
+version: 0.4.1
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: Web Playtest Preview shell recorded
+change_summary: hero-specific active skill effects recorded
 ---
 
 # Changelog
+
+## [0.4.1] - 2026-06-24
+
+### Added
+
+- Added serializable enemy `statusEffects` for slow and stun, measured in fixed ticks.
+- Added hero-specific active skill behavior for Hook Guardian, Frost Priestess, Storm Sigilist, and Moonblade Ranger.
+- Added Hook Guardian pullback and carrier stun behavior.
+- Added Frost Priestess area damage and slow behavior.
+- Added Storm Chain jump targeting, jump decay, and ice/control combo bonus jumps.
+- Added Moonblade bounce burst with bonus damage against slowed or stunned enemies.
+- Added regression coverage for each hero-specific skill and the Frost + Storm combo.
+
+### Changed
+
+- Extended Level 001 hero configs with data-driven skill shape fields.
+- Updated GameState schema documentation for current runtime types and skill status effects.
+- Marked `SKILL-002` complete and moved the next implementation target to `CRYSTAL-001`.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Active skills now have gameplay shape, but road-area targeting is still represented through target-enemy clicks in the current action model.
+Required Changes: Continue with explicit crystal recovery runtime state and then validate skill readability in Web Preview.
+Risk Level: Medium
 
 ## [0.4.0] - 2026-06-24
 

@@ -9,6 +9,17 @@ export type GameSpeed = 1 | 2 | 5 | 10;
 
 export type GameStatus = "ready" | "running" | "paused" | "won" | "lost";
 
+export type StatusEffectType = "slow" | "stun";
+
+export type StatusEffectState = Readonly<{
+  type: StatusEffectType;
+  remainingTicks: number;
+  speedMultiplier?: number;
+  sourceHeroId?: EntityId;
+}>;
+
+export type SkillKind = "direct-damage" | "hook" | "frost" | "storm-chain" | "moonblade";
+
 export type Hero = Readonly<{
   id: EntityId;
   archetype: string;
@@ -31,6 +42,7 @@ export type Enemy = Readonly<{
   health: number;
   maxHealth: number;
   carryingCrystal: boolean;
+  statusEffects?: readonly StatusEffectState[];
 }>;
 
 export type CrystalState = Readonly<{
@@ -64,9 +76,22 @@ export type HeroConfig = Readonly<{
   attackDamage: number;
   attackIntervalMs: number;
   attackRange: number;
+  skillKind?: SkillKind;
   skillManaCost?: number;
   skillCooldownMs?: number;
   skillDamage?: number;
+  skillPullDistance?: number;
+  skillStunMs?: number;
+  skillSlowMs?: number;
+  skillSlowMultiplier?: number;
+  skillRadius?: number;
+  skillJumpCount?: number;
+  skillJumpRadius?: number;
+  skillJumpDecay?: number;
+  skillBonusJumpsVsStatus?: number;
+  skillBounceCount?: number;
+  skillBounceDecay?: number;
+  skillBonusDamageVsStatusMultiplier?: number;
 }>;
 
 export type ResourceState = Readonly<{

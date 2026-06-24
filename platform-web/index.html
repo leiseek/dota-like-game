@@ -1,53 +1,54 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ancient Defense Web Preview</title>
+    <title>远古守卫 Web 试玩版</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app-shell">
       <header class="top-bar">
         <div>
-          <h1>Ancient Defense</h1>
-          <p>Web Playtest Preview · Core-first Canvas adapter</p>
+          <h1>远古守卫</h1>
+          <p>Web 试玩预览 · Core-first Canvas 适配器</p>
         </div>
         <div class="hud" aria-live="polite">
-          <span id="hud-crystals">Crystals --/--</span>
-          <span id="hud-gold">Gold --</span>
-          <span id="hud-mana">Mana --</span>
-          <span id="hud-wave">Wave --/--</span>
-          <span id="hud-status">Status --</span>
+          <span id="hud-crystals">水晶 --/--</span>
+          <span id="hud-gold">金币 --</span>
+          <span id="hud-mana">能量 --</span>
+          <span id="hud-wave">波次 --/--</span>
+          <span id="hud-status">状态 --</span>
         </div>
       </header>
 
       <section class="battle-layout">
-        <canvas id="battle-canvas" width="960" height="540" aria-label="Battle map preview"></canvas>
+        <canvas id="battle-canvas" width="960" height="540" aria-label="战斗地图试玩预览"></canvas>
         <aside class="control-panel">
-          <h2>Controls</h2>
-          <button id="start-button" type="button">Start</button>
-          <button id="pause-button" type="button">Pause</button>
-          <button id="speed-button" type="button">Speed 1x</button>
-          <button id="wave-button" type="button">Start Next Wave</button>
+          <h2>操作</h2>
+          <button id="start-button" type="button">开始</button>
+          <button id="pause-button" type="button">暂停</button>
+          <button id="speed-button" type="button">速度 1x</button>
+          <button id="wave-button" type="button">开始下一波</button>
+          <button id="auto-cast-button" type="button">自动大招：未选择英雄</button>
 
-          <label for="hero-select">Build hero</label>
+          <label for="hero-select">建造英雄</label>
           <select id="hero-select">
-            <option value="hook-guardian">Hook Guardian · 120g</option>
-            <option value="frost-priestess">Frost Priestess · 110g</option>
-            <option value="storm-sigilist">Storm Sigilist · 140g</option>
-            <option value="moonblade-ranger">Moonblade Ranger · 130g</option>
+            <option value="hook-guardian">钩锁守卫 · 120 金币</option>
+            <option value="frost-priestess">冰霜祭司 · 110 金币</option>
+            <option value="storm-sigilist">风暴符师 · 140 金币</option>
+            <option value="moonblade-ranger">月刃游侠 · 130 金币</option>
           </select>
 
-          <button id="save-button" type="button">Save and Exit</button>
-          <button id="resume-button" type="button">Continue Saved Battle</button>
-          <button id="abandon-button" type="button">Abandon Saved Battle</button>
+          <button id="save-button" type="button">保存并退出</button>
+          <button id="resume-button" type="button">继续存档</button>
+          <button id="abandon-button" type="button">放弃存档</button>
 
           <div class="hint">
-            <strong>How to play</strong>
-            <p>Click an empty slot to build the selected hero. Click a hero to select it, then click an enemy to cast its active skill.</p>
+            <strong>玩法提示</strong>
+            <p>点击空塔位建造英雄。点击英雄可查看等级、经验和被动；点击敌人可查看状态。选中英雄后点击敌人可手动释放大招，也可以在右侧开启自动大招。</p>
           </div>
-          <p id="message" class="message">Ready.</p>
+          <p id="message" class="message">准备就绪。</p>
         </aside>
       </section>
     </main>

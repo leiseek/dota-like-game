@@ -169,7 +169,7 @@ test("endpoint monsters return to the start instead of leaving through the Ancie
     assert.equal(turnedAround.enemies[0]?.returningToStart, true);
     assert.equal(turnedAround.enemies[0]?.carryingCrystal, false);
     assertNear(turnedAround.enemies[0]?.position.x, 100);
-    const leftFromStart = stepSimulation(turnedAround, 5, straightLevel);
+    const leftFromStart = stepSimulation(turnedAround, 6, straightLevel);
     assert.equal(leftFromStart.baseHealth, straightLevel.baseHealth);
     assert.equal(leftFromStart.enemies.length, 0);
     assert.equal(leftFromStart.crystal.stolenCount, 1);

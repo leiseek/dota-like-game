@@ -1,10 +1,10 @@
 ---
 doc_id: TASK_BOARD
-version: 0.4.1
+version: 0.4.2
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: SKILL-002 hero-specific active skill effects completed
+change_summary: CRYSTAL-001 explicit crystal recovery runtime state completed
 ---
 
 # Task Board
@@ -64,7 +64,7 @@ change_summary: SKILL-002 hero-specific active skill effects completed
 |---|---|---|---|---|
 | SKILL-001 | active skill resource and cooldown foundation | Engineering | Done | CAST_SKILL uses per-hero mana cost, cooldown, configured damage, target validation, reward payout, carrier recovery, and rejection tests |
 | SKILL-002 | hero-specific active skill effects | Engineering + Combat | Done | hook pull/stun, frost area slow, storm chain jumps, ice combo bonus jumps, and moonblade bounce burst covered by regression tests |
-| CRYSTAL-001 | explicit crystal recovery runtime state | Engineering | Todo | stolen/dropped/recovered crystals are represented in GameState and HUD |
+| CRYSTAL-001 | explicit crystal recovery runtime state | Engineering | Done | stolen, dropped, recovered, and escaped crystal states/events are represented in GameState and HUD selector, with regression tests |
 | SETTLEMENT-001 | win/lose/star settlement | Engineering + UX | Todo | settlement state and star rating based on remaining crystals |
 
 ## Execution Policy
@@ -73,14 +73,14 @@ Unless the Project Owner explicitly asks to pause, continue implementing Demo 0.
 
 ## Current Implementation Note
 
-`MAP-001`, `WAVE-001`, `ENEMY-001`, `TOWER-001`, `COMBAT-001`, `HUD-001`, `SAVE-001`, `REVIEW-002`, `SKILL-001`, `SKILL-002`, and `WEB-001` are complete. Continue with `CRYSTAL-001` explicit crystal recovery runtime state unless the owner reprioritizes settlement work.
+`MAP-001`, `WAVE-001`, `ENEMY-001`, `TOWER-001`, `COMBAT-001`, `HUD-001`, `SAVE-001`, `REVIEW-002`, `SKILL-001`, `SKILL-002`, `CRYSTAL-001`, and `WEB-001` are complete. Continue with `SETTLEMENT-001` win/lose/star settlement unless the owner reprioritizes obstacle destruction or Web Preview polish.
 
 ## Self Review
 
 Review Result: Pass
 
-Main Issues: Explicit crystal recovery state, obstacle destruction, settlement, stronger snapshot validation, and Web Preview polish remain follow-up work for Demo 0.1.
+Main Issues: Settlement, obstacle destruction, stronger snapshot validation, and Web Preview polish remain follow-up work for Demo 0.1.
 
-Required Changes: Continue with `CRYSTAL-001` while preserving core-first architecture and using Web Preview only as a platform adapter.
+Required Changes: Continue with `SETTLEMENT-001` while preserving core-first architecture and using Web Preview only as a platform adapter.
 
 Risk Level: Medium

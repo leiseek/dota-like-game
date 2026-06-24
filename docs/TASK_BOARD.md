@@ -1,10 +1,10 @@
 ---
 doc_id: TASK_BOARD
-version: 0.5.0
+version: 0.6.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: Demo 0.1 readiness review and playtest checklist added
+change_summary: GitHub Pages Web Preview deployment added
 ---
 
 # Task Board
@@ -57,6 +57,7 @@ change_summary: Demo 0.1 readiness review and playtest checklist added
 | Task ID | Title | Owner Agent | Status | Acceptance Summary |
 |---|---|---|---|---|
 | WEB-001 | Web Playtest Preview shell | Platform Web + Engineering | Done | zero-dependency Canvas preview renders Level 001 state, dispatches GameAction controls, supports build/select/cast, pause/resume, 1x/2x/5x/10x, start-next-wave, and local snapshot continue |
+| WEB-DEPLOY-001 | GitHub Pages Web Preview deployment | Platform Web + Engineering | Done | push to main runs check, builds Pages artifact, and deploys Web Preview to GitHub Pages through Actions |
 
 ## Demo 0.1 Core Tasks
 
@@ -72,7 +73,7 @@ change_summary: Demo 0.1 readiness review and playtest checklist added
 | Task ID | Title | Owner Agent | Status | Acceptance Summary |
 |---|---|---|---|---|
 | CI-001 | GitHub Actions check workflow | Engineering + QA | Done | PR and main pushes run `npm run check` on Node 22 |
-| PLAYTEST-001 | Web Preview smoke playtest checklist | QA + Design | Done | manual checklist and notes template added in `WEB_PREVIEW_SMOKE_PLAYTEST.md`; actual local run still required |
+| PLAYTEST-001 | Web Preview smoke playtest checklist | QA + Design | Done | manual checklist and notes template added in `WEB_PREVIEW_SMOKE_PLAYTEST.md`; actual local/browser run still required |
 | REVIEW-003 | Demo 0.1 Core Self Review | Self Review | Done | conditional pass recorded in `DEMO_01_CORE_SELF_REVIEW.md`; external release not approved yet |
 | POLISH-001 | Web Preview readability polish | Platform Web + UX | Todo | improve visual clarity for skills, crystal carrier, settlement, and 10x gameplay after playtest findings |
 | BALANCE-001 | first numeric balance pass | Combat + QA | Todo | tune waves, costs, mana, cooldowns, and star thresholds after one full playtest run |
@@ -85,14 +86,14 @@ Unless the Project Owner explicitly asks to pause, continue implementing Demo 0.
 
 ## Current Implementation Note
 
-Demo 0.1 P0 core loop is now on `main`. The project is ready for internal Web Preview smoke playtest after CI/local `npm run check` passes. Do not start broad feature expansion until playtest findings are recorded.
+Demo 0.1 P0 core loop is now on `main`. GitHub Pages deployment is configured for Web Preview testing after pushes to `main`. Next step is to enable Pages source as GitHub Actions in repository settings if not already enabled, merge the deployment PR, and test the deployed URL.
 
 ## Self Review
 
-Review Result: Conditional Pass
+Review Result: Pass
 
-Main Issues: The Web Preview has not yet been manually run in this chat environment, and balance is unvalidated.
+Main Issues: Actual Pages deployment still requires repository settings and the post-merge Actions run to succeed.
 
-Required Changes: Run `npm run check`, run `npm run preview:web`, fill `WEB_PREVIEW_SMOKE_PLAYTEST.md`, then prioritize `POLISH-001` and `BALANCE-001` from real findings.
+Required Changes: After merge, verify the Actions deployment and test `https://leiseek.github.io/dota-like-game/`.
 
 Risk Level: Medium

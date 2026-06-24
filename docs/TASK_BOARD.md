@@ -1,10 +1,10 @@
 ---
 doc_id: TASK_BOARD
-version: 0.4.0
+version: 0.4.1
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: Web Playtest Preview shell completed and Demo 0.1 validation path added
+change_summary: SKILL-002 hero-specific active skill effects completed
 ---
 
 # Task Board
@@ -63,7 +63,7 @@ change_summary: Web Playtest Preview shell completed and Demo 0.1 validation pat
 | Task ID | Title | Owner Agent | Status | Acceptance Summary |
 |---|---|---|---|---|
 | SKILL-001 | active skill resource and cooldown foundation | Engineering | Done | CAST_SKILL uses per-hero mana cost, cooldown, configured damage, target validation, reward payout, carrier recovery, and rejection tests |
-| SKILL-002 | hero-specific active skill effects | Engineering + Combat | Todo | hook pull/stun, frost road slow, storm chain jumps, moonblade burst/bounces, and ice-lightning combo |
+| SKILL-002 | hero-specific active skill effects | Engineering + Combat | Done | hook pull/stun, frost area slow, storm chain jumps, ice combo bonus jumps, and moonblade bounce burst covered by regression tests |
 | CRYSTAL-001 | explicit crystal recovery runtime state | Engineering | Todo | stolen/dropped/recovered crystals are represented in GameState and HUD |
 | SETTLEMENT-001 | win/lose/star settlement | Engineering + UX | Todo | settlement state and star rating based on remaining crystals |
 
@@ -73,14 +73,14 @@ Unless the Project Owner explicitly asks to pause, continue implementing Demo 0.
 
 ## Current Implementation Note
 
-`MAP-001`, `WAVE-001`, `ENEMY-001`, `TOWER-001`, `COMBAT-001`, `HUD-001`, `SAVE-001`, `REVIEW-002`, `SKILL-001`, and `WEB-001` are complete. Continue with `SKILL-002` hero-specific active skill effects unless the owner reprioritizes crystal recovery or settlement work.
+`MAP-001`, `WAVE-001`, `ENEMY-001`, `TOWER-001`, `COMBAT-001`, `HUD-001`, `SAVE-001`, `REVIEW-002`, `SKILL-001`, `SKILL-002`, and `WEB-001` are complete. Continue with `CRYSTAL-001` explicit crystal recovery runtime state unless the owner reprioritizes settlement work.
 
 ## Self Review
 
 Review Result: Pass
 
-Main Issues: Hero-specific active skill effects, explicit crystal recovery state, obstacle destruction, settlement, stronger snapshot validation, and Web Preview polish remain follow-up work for Demo 0.1.
+Main Issues: Explicit crystal recovery state, obstacle destruction, settlement, stronger snapshot validation, and Web Preview polish remain follow-up work for Demo 0.1.
 
-Required Changes: Continue with `SKILL-002` while preserving core-first architecture and using Web Preview only as a platform adapter.
+Required Changes: Continue with `CRYSTAL-001` while preserving core-first architecture and using Web Preview only as a platform adapter.
 
 Risk Level: Medium

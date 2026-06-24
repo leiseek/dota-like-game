@@ -52,7 +52,7 @@ export type CrystalRuntimeStatus = "safe" | "carried" | "dropped" | "returning" 
 export type CrystalEvent = Readonly<{
   type: CrystalEventType;
   tick: number;
-  enemyId?: EntityId;
+  enemyId?: EntityId | undefined;
 }>;
 
 export type CrystalState = Readonly<{

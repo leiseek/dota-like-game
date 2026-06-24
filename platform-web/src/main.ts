@@ -195,17 +195,13 @@ function findCombatFeedbackHero(previousState: GameState, nextState: GameState, 
 }
 
 function addProjectileEffect(start: Vector2, end: Vector2, style: CombatVfxStyle): void {
-  combatEffects = [
-    ...combatEffects,
-    { type: "projectile", style, start, end, ageMs: 0, durationMs: PROJECTILE_DURATION_MS },
-  ].slice(-48);
+  const effect: ProjectileEffect = { type: "projectile", style, start, end, ageMs: 0, durationMs: PROJECTILE_DURATION_MS };
+  combatEffects = [...combatEffects, effect].slice(-48);
 }
 
 function addHitEffect(position: Vector2, style: CombatVfxStyle): void {
-  combatEffects = [
-    ...combatEffects,
-    { type: "hit", style, position, ageMs: 0, durationMs: HIT_EFFECT_DURATION_MS },
-  ].slice(-48);
+  const effect: HitEffect = { type: "hit", style, position, ageMs: 0, durationMs: HIT_EFFECT_DURATION_MS };
+  combatEffects = [...combatEffects, effect].slice(-48);
 }
 
 function addFloatingText(text: string, position: Vector2): void {
@@ -228,7 +224,10 @@ function updateFloatingTexts(deltaMs: number): void {
 
 function updateCombatEffects(deltaMs: number): void {
   combatEffects = combatEffects
-    .map((effect) => ({ ...effect, ageMs: effect.ageMs + deltaMs }))
+    .map((effect): CombatEffect => {
+      if (effect.type === "projectile") return { ...effect, ageMs: effect.ageMs + deltaMs };
+      return { ...effect, ageMs: effect.ageMs + deltaMs };
+    })
     .filter((effect) => effect.ageMs < effect.durationMs);
 }
 

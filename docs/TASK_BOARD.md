@@ -1,10 +1,10 @@
 ---
 doc_id: TASK_BOARD
-version: 0.4.3
+version: 0.5.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: SETTLEMENT-001 win/lose/star settlement completed
+change_summary: Demo 0.1 readiness review and playtest checklist added
 ---
 
 # Task Board
@@ -67,13 +67,17 @@ change_summary: SETTLEMENT-001 win/lose/star settlement completed
 | CRYSTAL-001 | explicit crystal recovery runtime state | Engineering | Done | stolen, dropped, recovered, and escaped crystal states/events are represented in GameState and HUD selector, with regression tests |
 | SETTLEMENT-001 | win/lose/star settlement | Engineering + UX | Done | settlement outcome, reason, stars, remaining crystals, and HUD/Web Preview display covered by regression tests |
 
-## Next Demo 0.1 Readiness Tasks
+## Demo 0.1 Readiness Tasks
 
 | Task ID | Title | Owner Agent | Status | Acceptance Summary |
 |---|---|---|---|---|
-| PLAYTEST-001 | Web Preview smoke playtest | QA + Design | Todo | run PR stack locally, verify first playable loop, record readability and balance issues |
-| REVIEW-003 | Demo 0.1 Core Self Review | Self Review | Todo | review core loop readiness across design, code, UX, balance, platform, QA, and release readiness |
-| POLISH-001 | Web Preview readability polish | Platform Web + UX | Todo | improve visual clarity for skills, crystal carrier, settlement, and 10x gameplay if playtest identifies issues |
+| CI-001 | GitHub Actions check workflow | Engineering + QA | Done | PR and main pushes run `npm run check` on Node 22 |
+| PLAYTEST-001 | Web Preview smoke playtest checklist | QA + Design | Done | manual checklist and notes template added in `WEB_PREVIEW_SMOKE_PLAYTEST.md`; actual local run still required |
+| REVIEW-003 | Demo 0.1 Core Self Review | Self Review | Done | conditional pass recorded in `DEMO_01_CORE_SELF_REVIEW.md`; external release not approved yet |
+| POLISH-001 | Web Preview readability polish | Platform Web + UX | Todo | improve visual clarity for skills, crystal carrier, settlement, and 10x gameplay after playtest findings |
+| BALANCE-001 | first numeric balance pass | Combat + QA | Todo | tune waves, costs, mana, cooldowns, and star thresholds after one full playtest run |
+| SNAPSHOT-002 | snapshot validation hardening | Engineering | Todo | validate schema version, level id, and corrupted payloads more explicitly |
+| OBSTACLE-001 | destructible obstacle gameplay | Engineering + Level Design | Todo | enable obstacle targeting/destruction and slot unlock rewards |
 
 ## Execution Policy
 
@@ -81,14 +85,14 @@ Unless the Project Owner explicitly asks to pause, continue implementing Demo 0.
 
 ## Current Implementation Note
 
-Demo 0.1 P0 core loop tasks are now implemented in the stacked PR sequence. Continue with `PLAYTEST-001` and `REVIEW-003` once the PR stack is merged or checked locally.
+Demo 0.1 P0 core loop is now on `main`. The project is ready for internal Web Preview smoke playtest after CI/local `npm run check` passes. Do not start broad feature expansion until playtest findings are recorded.
 
 ## Self Review
 
-Review Result: Pass
+Review Result: Conditional Pass
 
-Main Issues: Web Preview stack still needs local build/test execution and gameplay readability playtest.
+Main Issues: The Web Preview has not yet been manually run in this chat environment, and balance is unvalidated.
 
-Required Changes: Run `npm run check` and `npm run preview:web` locally after merging or checking out the PR stack.
+Required Changes: Run `npm run check`, run `npm run preview:web`, fill `WEB_PREVIEW_SMOKE_PLAYTEST.md`, then prioritize `POLISH-001` and `BALANCE-001` from real findings.
 
 Risk Level: Medium

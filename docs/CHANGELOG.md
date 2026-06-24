@@ -1,13 +1,35 @@
 ---
 doc_id: CHANGELOG
-version: 0.5.0
+version: 0.6.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: Demo 0.1 readiness review recorded
+change_summary: GitHub Pages Web Preview deployment recorded
 ---
 
 # Changelog
+
+## [0.6.0] - 2026-06-24
+
+### Added
+
+- Added `npm run build:pages` to build a deployable GitHub Pages artifact.
+- Added `scripts/build-pages.mjs` to prepare `pages-dist/` with `platform-web/`, root `dist/`, `.nojekyll`, and a root redirect page.
+- Added GitHub Actions Pages deployment for pushes to `main` after `npm run check` passes.
+- Added manual `workflow_dispatch` support for the CI workflow.
+
+### Changed
+
+- Updated Web Preview documentation with deployed Pages URL and artifact layout.
+- Updated task board to mark `WEB-DEPLOY-001` complete.
+- Ignored local `pages-dist/` output.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Actual deployment still depends on repository Pages settings allowing GitHub Actions deployment.
+Required Changes: Enable GitHub Pages source as GitHub Actions, merge this PR, and verify the deployed URL.
+Risk Level: Medium
 
 ## [0.5.0] - 2026-06-24
 

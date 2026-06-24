@@ -1,10 +1,10 @@
 ---
 doc_id: DOC_VERSION_INDEX
-version: 0.5.0
+version: 0.6.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: v0.5.0 Demo 0.1 readiness review documentation updates
+change_summary: v0.6.0 GitHub Pages Web Preview deployment documentation updates
 ---
 
 # Document Version Index
@@ -26,12 +26,12 @@ change_summary: v0.5.0 Demo 0.1 readiness review documentation updates
 | LEVEL_001.md | 0.2.0 | active | Level Designer Agent | first level design |
 | HERO_DESIGN.md | 0.2.0 | active | Combat Designer Agent | first hero set |
 | UI_UX_SPEC.md | 0.4.3 | active | UX/UI Agent | settlement result display added |
-| WEB_PREVIEW_SPEC.md | 0.1.0 | active | Platform Web Agent | Web Playtest Preview shell |
+| WEB_PREVIEW_SPEC.md | 0.6.0 | active | Platform Web Agent | GitHub Pages deployment added for Web Preview testing |
 | WEB_PREVIEW_SMOKE_PLAYTEST.md | 0.5.0 | active | QA Agent | Web Preview smoke playtest checklist |
 | ROADMAP.md | 0.1.0 | active | Executive Producer Agent | phase roadmap |
-| TASK_BOARD.md | 0.5.0 | active | Team Leader Agent | readiness checklist and review complete; polish/balance next |
+| TASK_BOARD.md | 0.6.0 | active | Team Leader Agent | GitHub Pages Web Preview deployment complete |
 | DECISIONS.md | 0.4.0 | active | Team Leader Agent | ADR-0006 added |
-| CHANGELOG.md | 0.5.0 | active | Team Leader Agent | Demo 0.1 readiness review recorded |
+| CHANGELOG.md | 0.6.0 | active | Team Leader Agent | GitHub Pages Web Preview deployment recorded |
 
 ## Status Definitions
 

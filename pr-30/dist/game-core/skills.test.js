@@ -19,6 +19,23 @@ function testEnemy(id, position = { x: 150, y: 190 }, health = 300) {
         carryingCrystal: false,
     };
 }
+function pathEnemy(id, pathIndex, progress, health = 100) {
+    const start = level001Config.path[pathIndex] ?? level001Config.path[0];
+    const end = level001Config.path[pathIndex + 1] ?? start;
+    return {
+        id,
+        archetype: "rift-grunt",
+        pathIndex,
+        progress,
+        position: {
+            x: start.x + (end.x - start.x) * progress,
+            y: start.y + (end.y - start.y) * progress,
+        },
+        health,
+        maxHealth: health,
+        carryingCrystal: false,
+    };
+}
 function withHero(state, heroId, patch) {
     return {
         ...state,
@@ -130,12 +147,12 @@ test("higher hero levels reduce active ultimate cooldown", () => {
 });
 test("auto-cast toggles per hero and casts deterministically on an in-range target", () => {
     const built = buildHero(createInitialGameState(level001Config), "T01", "hook-guardian");
-    const withEnemy = spawnEnemies(built, [testEnemy("enemy-1", { x: 150, y: 190 }, 100)]);
+    const withEnemy = spawnEnemies(built, [pathEnemy("enemy-1", 0, 0.6, 100)]);
     const toggled = stepSimulation(enqueueAction(withEnemy, { type: "SET_AUTO_CAST", heroId: "hero-1", enabled: true }), 0, level001Config);
     const afterAuto = stepSimulation({ ...toggled, status: "running", clock: { ...toggled.clock, paused: false } }, 1, level001Config);
     const hero = afterAuto.heroes[0];
     const enemy = afterAuto.enemies.find((candidate) => candidate.id === "enemy-1");
     assert.equal(hero?.autoCastEnabled, true);
     assert.ok((hero?.cooldownTicksRemaining ?? 0) > 0);
-    assert.equal(enemy?.health, 20);
+    assert.equal(enemy?.health, 2);
 });

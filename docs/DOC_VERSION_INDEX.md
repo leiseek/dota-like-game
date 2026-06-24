@@ -1,10 +1,10 @@
 ---
 doc_id: DOC_VERSION_INDEX
-version: 0.4.2
+version: 0.4.3
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: v0.4.2 explicit crystal recovery runtime state documentation updates
+change_summary: v0.4.3 win/lose/star settlement documentation updates
 ---
 
 # Document Version Index
@@ -21,15 +21,15 @@ change_summary: v0.4.2 explicit crystal recovery runtime state documentation upd
 | PHASE_1_TECHNICAL_REVIEW.md | 0.1.0 | active | Self Review Agent | Phase 1 game-core technical review |
 | PLATFORM_STRATEGY.md | 0.1.0 | active | Platform Strategy Agent | HarmonyOS + WeChat Mini Game strategy |
 | TECH_ARCHITECTURE.md | 0.4.0 | active | Technical Architect Agent | current core-first architecture with Web Preview adapter |
-| GAME_STATE_SCHEMA.md | 0.4.2 | active | Technical Architect Agent | explicit crystal recovery runtime state added |
+| GAME_STATE_SCHEMA.md | 0.4.3 | active | Technical Architect Agent | battle settlement runtime state added |
 | LEVEL_001.md | 0.2.0 | active | Level Designer Agent | first level design |
 | HERO_DESIGN.md | 0.2.0 | active | Combat Designer Agent | first hero set |
-| UI_UX_SPEC.md | 0.2.0 | active | UX/UI Agent | battle HUD and controls |
+| UI_UX_SPEC.md | 0.4.3 | active | UX/UI Agent | settlement result display added |
 | WEB_PREVIEW_SPEC.md | 0.1.0 | active | Platform Web Agent | Web Playtest Preview shell |
 | ROADMAP.md | 0.1.0 | active | Executive Producer Agent | phase roadmap |
-| TASK_BOARD.md | 0.4.2 | active | Team Leader Agent | CRYSTAL-001 complete; SETTLEMENT-001 next |
+| TASK_BOARD.md | 0.4.3 | active | Team Leader Agent | SETTLEMENT-001 complete; PLAYTEST-001 next |
 | DECISIONS.md | 0.4.0 | active | Team Leader Agent | ADR-0006 added |
-| CHANGELOG.md | 0.4.2 | active | Team Leader Agent | Explicit crystal recovery runtime state recorded |
+| CHANGELOG.md | 0.4.3 | active | Team Leader Agent | Win/lose/star settlement recorded |
 
 ## Status Definitions
 

@@ -1,10 +1,10 @@
 ---
 doc_id: WEB_PREVIEW_SPEC
-version: 0.6.0
+version: 0.6.1
 status: active
 owner_agent: Platform Web Agent
 last_updated: 2026-06-24
-change_summary: GitHub Pages deployment added for Web Preview testing
+change_summary: GitHub Pages enablement fallback documented
 ---
 
 # Web Preview Spec
@@ -93,9 +93,16 @@ GitHub Actions behavior:
 
 - pull requests run `npm run check` only;
 - pushes to `main` run `npm run check` and then deploy `pages-dist/` to GitHub Pages;
+- `actions/configure-pages` is configured with `enablement: true` so the workflow can initialize Pages when repository permissions allow it;
 - manual workflow dispatch is available for CI, but Pages deployment only runs on `main` pushes.
 
-Expected test URL after Pages is enabled in repository settings:
+If deployment fails with `Get Pages site failed`, enable Pages manually:
+
+```text
+Settings → Pages → Build and deployment → Source: GitHub Actions
+```
+
+Expected test URL after Pages is enabled:
 
 ```text
 https://leiseek.github.io/dota-like-game/
@@ -140,12 +147,13 @@ Review Result: Pass
 Main Issues:
 
 - Web Preview currently uses placeholder Canvas shapes and labels.
-- Pages deployment depends on repository Pages settings allowing GitHub Actions deployment.
+- Pages deployment depends on repository Pages settings and workflow permission to enable Pages.
 - It validates interaction flow, not final mobile UX polish.
 
 Required Changes:
 
-- Enable GitHub Pages source as GitHub Actions in repository settings.
+- Merge the Pages enablement workflow fix.
+- If the workflow still cannot enable Pages automatically, enable GitHub Pages source as GitHub Actions in repository settings.
 - Use the deployed Web Preview for `PLAYTEST-001` smoke testing.
 
-Risk Level: Medium
+Risk Level: Low-Medium

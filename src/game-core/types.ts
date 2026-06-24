@@ -45,9 +45,27 @@ export type Enemy = Readonly<{
   statusEffects?: readonly StatusEffectState[];
 }>;
 
+export type CrystalEventType = "stolen" | "dropped" | "recovered" | "escaped";
+
+export type CrystalRuntimeStatus = "safe" | "carried" | "recovered" | "escaped";
+
+export type CrystalEvent = Readonly<{
+  type: CrystalEventType;
+  tick: number;
+  enemyId?: EntityId;
+}>;
+
 export type CrystalState = Readonly<{
   atBase: boolean;
+  status: CrystalRuntimeStatus;
   carrierEnemyId?: EntityId;
+  lastCarrierEnemyId?: EntityId;
+  lastDroppedEnemyId?: EntityId;
+  lastEvent?: CrystalEvent;
+  stolenCount: number;
+  droppedCount: number;
+  recoveredCount: number;
+  escapedCount: number;
 }>;
 
 export type GameClock = Readonly<{
@@ -206,6 +224,18 @@ export type HudWaveState = Readonly<{
   killedCountInWave: number;
 }>;
 
+export type HudCrystalState = Readonly<{
+  status: CrystalRuntimeStatus;
+  carrierEnemyId?: EntityId;
+  lastCarrierEnemyId?: EntityId;
+  lastDroppedEnemyId?: EntityId;
+  lastEventType?: CrystalEventType;
+  stolenCount: number;
+  droppedCount: number;
+  recoveredCount: number;
+  escapedCount: number;
+}>;
+
 export type HudSpeedOption = Readonly<{
   speed: GameSpeed;
   isActive: boolean;
@@ -214,6 +244,7 @@ export type HudSpeedOption = Readonly<{
 export type HudState = Readonly<{
   crystals: number;
   maxCrystals: number;
+  crystal: HudCrystalState;
   gold: number;
   manaCrystal: number;
   wave: HudWaveState;

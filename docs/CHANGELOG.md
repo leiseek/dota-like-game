@@ -1,13 +1,37 @@
 ---
 doc_id: CHANGELOG
-version: 0.4.1
+version: 0.4.2
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: hero-specific active skill effects recorded
+change_summary: explicit crystal recovery runtime state recorded
 ---
 
 # Changelog
+
+## [0.4.2] - 2026-06-24
+
+### Added
+
+- Added explicit `CrystalState` runtime status for safe, carried, recovered, and escaped states.
+- Added crystal event tracking for stolen, dropped, recovered, and escaped feedback.
+- Added stolen, dropped, recovered, and escaped counters to support HUD, review, and future settlement logic.
+- Added `HudCrystalState` through the platform-neutral HUD selector.
+- Added Web Preview HUD text for crystal status and Canvas labels for slow/stun readability.
+- Added regression coverage for initial safe crystal state, stolen state, carrier kill recovery, and carrier escape.
+
+### Changed
+
+- Replaced implicit carrier-only crystal recovery with explicit `recoverCrystal`, `stealCrystal`, and `escapeCrystal` state transitions.
+- Updated GameState schema documentation for explicit crystal feedback state.
+- Marked `CRYSTAL-001` complete and moved the next implementation target to `SETTLEMENT-001`.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Demo 0.1 records dropped-and-recovered in one step instead of spawning a separate pickup entity.
+Required Changes: Continue with win/lose/star settlement and use crystal state as settlement input.
+Risk Level: Medium
 
 ## [0.4.1] - 2026-06-24
 

@@ -1,10 +1,10 @@
 ---
 doc_id: DOC_VERSION_INDEX
-version: 0.6.1
+version: 0.7.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: v0.6.1 branch-based GitHub Pages PR preview deployment updates
+change_summary: v0.7.0 returning crystal and interception loop documentation updates
 ---
 
 # Document Version Index
@@ -22,16 +22,16 @@ change_summary: v0.6.1 branch-based GitHub Pages PR preview deployment updates
 | DEMO_01_CORE_SELF_REVIEW.md | 0.5.0 | active | Self Review Agent | Demo 0.1 core readiness conditional pass |
 | PLATFORM_STRATEGY.md | 0.1.0 | active | Platform Strategy Agent | HarmonyOS + WeChat Mini Game strategy |
 | TECH_ARCHITECTURE.md | 0.4.0 | active | Technical Architect Agent | current core-first architecture with Web Preview adapter |
-| GAME_STATE_SCHEMA.md | 0.4.3 | active | Technical Architect Agent | battle settlement runtime state added |
+| GAME_STATE_SCHEMA.md | 0.7.0 | active | Technical Architect Agent | returning crystal path state added |
 | LEVEL_001.md | 0.2.0 | active | Level Designer Agent | first level design |
 | HERO_DESIGN.md | 0.2.0 | active | Combat Designer Agent | first hero set |
 | UI_UX_SPEC.md | 0.4.3 | active | UX/UI Agent | settlement result display added |
 | WEB_PREVIEW_SPEC.md | 0.6.1 | active | Platform Web Agent | branch-based GitHub Pages PR preview deployment clarified |
 | WEB_PREVIEW_SMOKE_PLAYTEST.md | 0.5.0 | active | QA Agent | Web Preview smoke playtest checklist |
 | ROADMAP.md | 0.1.0 | active | Executive Producer Agent | phase roadmap |
-| TASK_BOARD.md | 0.6.1 | active | Team Leader Agent | branch-based Pages PR preview deployment clarified |
+| TASK_BOARD.md | 0.7.0 | active | Team Leader Agent | returning crystal and interception loop complete |
 | DECISIONS.md | 0.4.0 | active | Team Leader Agent | ADR-0006 added |
-| CHANGELOG.md | 0.6.1 | active | Team Leader Agent | Branch-based Pages PR preview deployment fix recorded |
+| CHANGELOG.md | 0.7.0 | active | Team Leader Agent | Returning crystal and interception loop recorded |
 
 ## Status Definitions
 

@@ -47,7 +47,7 @@ export type Enemy = Readonly<{
 
 export type CrystalEventType = "stolen" | "dropped" | "recovered" | "escaped";
 
-export type CrystalRuntimeStatus = "safe" | "carried" | "recovered" | "escaped";
+export type CrystalRuntimeStatus = "safe" | "carried" | "dropped" | "returning" | "recovered" | "escaped";
 
 export type CrystalEvent = Readonly<{
   type: CrystalEventType;
@@ -62,6 +62,10 @@ export type CrystalState = Readonly<{
   lastCarrierEnemyId?: EntityId;
   lastDroppedEnemyId?: EntityId;
   lastEvent?: CrystalEvent;
+  position?: Vector2;
+  pathIndex?: number;
+  progress?: number;
+  returnSpeedUnitsPerSecond?: number;
   stolenCount: number;
   droppedCount: number;
   recoveredCount: number;
@@ -250,6 +254,9 @@ export type HudCrystalState = Readonly<{
   lastCarrierEnemyId?: EntityId;
   lastDroppedEnemyId?: EntityId;
   lastEventType?: CrystalEventType;
+  position?: Vector2;
+  pathIndex?: number;
+  progress?: number;
   stolenCount: number;
   droppedCount: number;
   recoveredCount: number;

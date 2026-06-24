@@ -1,13 +1,35 @@
 ---
 doc_id: CHANGELOG
-version: 0.6.0
+version: 0.6.1
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: GitHub Pages Web Preview deployment recorded
+change_summary: branch-based Pages PR preview deployment fix recorded
 ---
 
 # Changelog
+
+## [0.6.1] - 2026-06-24
+
+### Changed
+
+- Replaced official GitHub Actions Pages deployment with branch-based deployment to `gh-pages`.
+- Updated main preview deployment to publish root `pages-dist/` content to the root of `gh-pages`.
+- Updated PR preview deployment to publish `pages-dist/` content under `gh-pages/pr-<PR_NUMBER>/`.
+- Updated PR preview comments to reuse a single marker comment instead of creating a new comment on every push.
+- Updated docs to clarify that Pages source must be `Deploy from a branch`, branch `gh-pages`, folder `/ (root)`.
+
+### Fixed
+
+- Avoids `actions/configure-pages@v5` failing with `Get Pages site failed ... Not Found` before/while Pages is initialized.
+- Avoids relying on official `actions/deploy-pages` PR preview mode, which is currently alpha and not publicly available.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: After this PR merges, the first main deployment must create/update the `gh-pages` branch before repository Pages can be pointed to it.
+Required Changes: Merge this PR, wait for the `gh-pages` branch to be created, then set Pages source to `Deploy from a branch`, branch `gh-pages`, folder `/ (root)`.
+Risk Level: Medium
 
 ## [0.6.0] - 2026-06-24
 

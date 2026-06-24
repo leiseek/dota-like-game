@@ -1,10 +1,10 @@
 ---
 doc_id: WEB_PREVIEW_SPEC
-version: 0.6.0
+version: 0.6.1
 status: active
 owner_agent: Platform Web Agent
 last_updated: 2026-06-24
-change_summary: GitHub Pages deployment added for Web Preview testing
+change_summary: branch-based GitHub Pages PR preview deployment clarified
 ---
 
 # Web Preview Spec
@@ -59,6 +59,7 @@ scripts/
   build-pages.mjs
 .github/workflows/
   ci.yml
+  pr-preview.yml
 ```
 
 ## Local Preview Commands
@@ -89,13 +90,31 @@ This command:
 5. writes `.nojekyll`;
 6. writes a root `index.html` that redirects to `./platform-web/`.
 
+## Deployment Mode
+
+The project uses the `gh-pages` branch as the GitHub Pages source so that both the main preview and per-PR preview directories can coexist under one site.
+
+Repository setting:
+
+```text
+Settings → Pages → Build and deployment
+Source: Deploy from a branch
+Branch: gh-pages / /(root)
+```
+
+Why not GitHub Actions Pages source for PR previews?
+
+- Official `actions/deploy-pages` supports normal production Pages deployment.
+- Its `preview` input is currently alpha and not publicly available, so it cannot be relied on for public per-PR URLs.
+- Branch-based deployment lets PR previews live under stable subdirectories such as `pr-23/`.
+
 GitHub Actions behavior:
 
-- pull requests run `npm run check` only;
-- pushes to `main` run `npm run check` and then deploy `pages-dist/` to GitHub Pages;
-- manual workflow dispatch is available for CI, but Pages deployment only runs on `main` pushes.
+- pull requests run `npm run check`, build `pages-dist/`, deploy to `gh-pages/pr-<PR_NUMBER>/`, and comment the preview URL on the PR;
+- pushes to `main` run `npm run check`, build `pages-dist/`, and deploy to the root of `gh-pages` while keeping existing PR preview directories;
+- manual workflow dispatch is available for CI.
 
-Expected test URL after Pages is enabled in repository settings:
+Main test URL:
 
 ```text
 https://leiseek.github.io/dota-like-game/
@@ -105,6 +124,12 @@ The root page redirects to:
 
 ```text
 https://leiseek.github.io/dota-like-game/platform-web/
+```
+
+PR preview URL pattern:
+
+```text
+https://leiseek.github.io/dota-like-game/pr-<PR_NUMBER>/platform-web/
 ```
 
 ## Implemented Interactions
@@ -140,12 +165,12 @@ Review Result: Pass
 Main Issues:
 
 - Web Preview currently uses placeholder Canvas shapes and labels.
-- Pages deployment depends on repository Pages settings allowing GitHub Actions deployment.
+- Pages source must be set to `Deploy from a branch` using `gh-pages`, not GitHub Actions, for PR preview URLs to be served.
 - It validates interaction flow, not final mobile UX polish.
 
 Required Changes:
 
-- Enable GitHub Pages source as GitHub Actions in repository settings.
-- Use the deployed Web Preview for `PLAYTEST-001` smoke testing.
+- Set GitHub Pages source to `Deploy from a branch`, branch `gh-pages`, root folder after this PR creates the branch.
+- Use the deployed Web Preview and PR preview URLs for `PLAYTEST-001` smoke testing.
 
 Risk Level: Medium

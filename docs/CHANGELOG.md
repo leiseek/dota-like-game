@@ -1,13 +1,38 @@
 ---
 doc_id: CHANGELOG
-version: 0.3.10
+version: 0.4.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: active skill foundation recorded
+change_summary: Web Playtest Preview shell recorded
 ---
 
 # Changelog
+
+## [0.4.0] - 2026-06-24
+
+### Added
+
+- Added `platform-web` Web Playtest Preview shell with Canvas rendering for Level 001 path, tower slots, obstacles, hero towers, enemies, HP bars, selected hero range, and crystal carrier marker.
+- Added Web controls for start, pause/resume, 1x/2x/5x/10x speed cycling, start-next-wave, hero build selection, local save/continue, and saved-battle abandon.
+- Added click interactions for building heroes on unlocked slots, selecting built hero towers, and casting active skills on enemies through core `GameAction` values.
+- Added `docs/WEB_PREVIEW_SPEC.md` to document the Web Preview purpose, platform boundary, commands, implemented interactions, and non-goals.
+- Added zero-dependency `platform-web/dev-server.mjs` preview server and Web TypeScript build config.
+
+### Changed
+
+- Updated README to reflect the current implementation instead of the old docs-only baseline.
+- Updated technical architecture to record the actual `src/game-core` plus `platform-web` structure.
+- Added ADR-0006 accepting Web Playtest Preview before native platform shells.
+- Updated task board to mark `WEB-001` done while keeping `SKILL-002` as the next Demo 0.1 gameplay task.
+- Updated package scripts with `build:web`, `preview:web`, and Web compilation in `check`.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Web Preview uses placeholder visuals and should not become authoritative gameplay logic.
+Required Changes: Continue with `SKILL-002`, then validate hero-specific skill effects through Web Preview.
+Risk Level: Medium
 
 ## [0.3.10] - 2026-06-24
 

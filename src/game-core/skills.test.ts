@@ -43,7 +43,21 @@ test("Hook Guardian pulls targets backward and stuns crystal carriers", () => {
     progress: 0.5,
     carryingCrystal: true,
   };
-  const withCarrier = spawnEnemies({ ...built, crystal: { atBase: false, carrierEnemyId: "enemy-1" } }, [carrier]);
+  const withCarrier = spawnEnemies(
+    {
+      ...built,
+      crystal: {
+        ...built.crystal,
+        atBase: false,
+        status: "carried",
+        carrierEnemyId: "enemy-1",
+        lastCarrierEnemyId: "enemy-1",
+        lastEvent: { type: "stolen", tick: built.clock.tick, enemyId: "enemy-1" },
+        stolenCount: 1,
+      },
+    },
+    [carrier],
+  );
 
   const afterHook = stepSimulation(
     enqueueAction(withCarrier, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }),

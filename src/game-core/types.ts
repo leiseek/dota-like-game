@@ -42,6 +42,7 @@ export type Enemy = Readonly<{
   health: number;
   maxHealth: number;
   carryingCrystal: boolean;
+  returningToStart?: boolean;
   statusEffects?: readonly StatusEffectState[];
 }>;
 

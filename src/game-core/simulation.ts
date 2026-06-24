@@ -6,6 +6,7 @@ import type {
   Hero,
   HeroConfig,
   HeroLevel,
+  HeroPassiveKind,
   LevelConfig,
   SettlementReason,
   SettlementState,
@@ -34,6 +35,13 @@ const DEFAULT_STORM_BONUS_JUMPS_VS_STATUS = 2;
 const DEFAULT_MOONBLADE_BOUNCE_COUNT = 2;
 const DEFAULT_MOONBLADE_BOUNCE_DECAY = 0.75;
 const DEFAULT_MOONBLADE_BONUS_DAMAGE_VS_STATUS = 1.2;
+const DEFAULT_PASSIVE_SLOW_MS = 700;
+const DEFAULT_PASSIVE_FREEZE_MS = 300;
+const DEFAULT_PASSIVE_BURN_MS = 600;
+const DEFAULT_PASSIVE_POISON_MS = 900;
+const DEFAULT_PASSIVE_DOT_DAMAGE = 1;
+const DEFAULT_PASSIVE_CHAIN_RADIUS = 105;
+const DEFAULT_PASSIVE_CLEAVE_RADIUS = 75;
 
 function applyAction(state: GameState, action: GameAction, level?: LevelConfig): GameState {
   switch (action.type) {
@@ -154,8 +162,28 @@ function getSkillDamage(level: LevelConfig | undefined, hero: Hero): number {
   return getHeroConfig(level, hero)?.skillDamage ?? DEFAULT_HERO_SKILL_DAMAGE;
 }
 
+function hasPassiveKind(level: LevelConfig | undefined, hero: Hero, kind: HeroPassiveKind): boolean {
+  const config = getHeroConfig(level, hero);
+  return Boolean(config?.progression?.passives.some((passive) => passive.kind === kind && hero.unlockedPassiveIds.includes(passive.id)));
+}
+
+function getAttackDamageAgainst(level: LevelConfig | undefined, hero: Hero, target: Enemy, baseDamage: number): number {
+  const antiCarrierMultiplier = hasPassiveKind(level, hero, "anti-carrier") && target.carryingCrystal ? 1.5 : 1;
+  return Math.round(baseDamage * antiCarrierMultiplier);
+}
+
+function getSkillDamageAgainst(level: LevelConfig | undefined, hero: Hero, target: Enemy): number {
+  return getAttackDamageAgainst(level, hero, target, getSkillDamage(level, hero));
+}
+
 type PendingEnemyMutation = { damage: number; pullDistance: number; statusEffects: StatusEffectState[] };
 type SkillApplicationResult = Readonly<{ enemies: readonly Enemy[]; killedEnemies: readonly Enemy[] }>;
+
+type StatusDamageResult = Readonly<{
+  enemies: readonly Enemy[];
+  killedEnemies: readonly Enemy[];
+  killCredits: ReadonlyMap<string, string>;
+}>;
 
 function castSkill(state: GameState, heroId: string, targetEnemyId: string, level?: LevelConfig): GameState {
   const hero = state.heroes.find((candidate) => candidate.id === heroId);
@@ -203,16 +231,21 @@ function applySkillEffect(enemies: readonly Enemy[], hero: Hero, target: Enemy, 
 
 function applyDirectDamageSkill(enemies: readonly Enemy[], hero: Hero, target: Enemy, level?: LevelConfig): SkillApplicationResult {
   const mutations = new Map<string, PendingEnemyMutation>();
-  addDamage(mutations, target.id, getSkillDamage(level, hero));
+  addDamage(mutations, target.id, getSkillDamageAgainst(level, hero, target));
+  addPassiveOnHitEffects(mutations, hero, target, level);
   return applyEnemyMutations(enemies, mutations, level);
 }
 
 function applyHookSkill(enemies: readonly Enemy[], hero: Hero, target: Enemy, level: LevelConfig | undefined, config: HeroConfig): SkillApplicationResult {
   const mutations = new Map<string, PendingEnemyMutation>();
-  addDamage(mutations, target.id, getSkillDamage(level, hero));
+  addDamage(mutations, target.id, getSkillDamageAgainst(level, hero, target));
+  addPassiveOnHitEffects(mutations, hero, target, level);
   addPull(mutations, target.id, config.skillPullDistance ?? DEFAULT_HOOK_PULL_DISTANCE);
-  if (target.carryingCrystal) {
+  if (target.carryingCrystal || hasPassiveKind(level, hero, "stun")) {
     addStatusEffect(mutations, target.id, { type: "stun", remainingTicks: msToTicks(config.skillStunMs ?? 1_000, level), speedMultiplier: 0, sourceHeroId: hero.id });
+  }
+  if (hasPassiveKind(level, hero, "fissure-block")) {
+    addStatusEffect(mutations, target.id, { type: "slow", remainingTicks: msToTicks(900, level), speedMultiplier: 0.55, sourceHeroId: hero.id });
   }
   return applyEnemyMutations(enemies, mutations, level);
 }
@@ -223,33 +256,63 @@ function applyFrostSkill(enemies: readonly Enemy[], hero: Hero, target: Enemy, l
   const slowTicks = msToTicks(config.skillSlowMs ?? DEFAULT_FROST_SLOW_MS, level);
   for (const enemy of enemies) {
     if (distance(enemy.position, target.position) > radius) continue;
-    addDamage(mutations, enemy.id, getSkillDamage(level, hero));
+    addDamage(mutations, enemy.id, getSkillDamageAgainst(level, hero, enemy));
     addStatusEffect(mutations, enemy.id, {
       type: "slow",
       remainingTicks: slowTicks,
       speedMultiplier: enemy.carryingCrystal ? Math.max(0.1, (config.skillSlowMultiplier ?? DEFAULT_FROST_SLOW_MULTIPLIER) - 0.15) : config.skillSlowMultiplier ?? DEFAULT_FROST_SLOW_MULTIPLIER,
       sourceHeroId: hero.id,
     });
+    addPassiveOnHitEffects(mutations, hero, enemy, level);
+    if (hasPassiveKind(level, hero, "freeze") && (hasControlStatus(enemy) || enemy.carryingCrystal)) {
+      addStatusEffect(mutations, enemy.id, { type: "stun", remainingTicks: msToTicks(DEFAULT_PASSIVE_FREEZE_MS, level), speedMultiplier: 0, sourceHeroId: hero.id });
+    }
   }
   return applyEnemyMutations(enemies, mutations, level);
 }
 
 function applyStormChainSkill(enemies: readonly Enemy[], hero: Hero, target: Enemy, level: LevelConfig | undefined, config: HeroConfig): SkillApplicationResult {
   const mutations = new Map<string, PendingEnemyMutation>();
-  const maxHits = 1 + (config.skillJumpCount ?? DEFAULT_STORM_JUMP_COUNT) + (hasControlStatus(target) ? config.skillBonusJumpsVsStatus ?? DEFAULT_STORM_BONUS_JUMPS_VS_STATUS : 0);
+  const passiveBonusHits = hasPassiveKind(level, hero, "lightning-chain") ? 1 : 0;
+  const maxHits = 1 + passiveBonusHits + (config.skillJumpCount ?? DEFAULT_STORM_JUMP_COUNT) + (hasControlStatus(target) ? config.skillBonusJumpsVsStatus ?? DEFAULT_STORM_BONUS_JUMPS_VS_STATUS : 0);
   const targets = selectChainTargets(enemies, target, maxHits, config.skillJumpRadius ?? DEFAULT_STORM_JUMP_RADIUS);
   const decay = config.skillJumpDecay ?? DEFAULT_STORM_JUMP_DECAY;
-  targets.forEach((enemy, index) => addDamage(mutations, enemy.id, Math.round(getSkillDamage(level, hero) * Math.pow(decay, index))));
+  targets.forEach((enemy, index) => {
+    addDamage(mutations, enemy.id, Math.round(getSkillDamageAgainst(level, hero, enemy) * Math.pow(decay, index)));
+    addPassiveOnHitEffects(mutations, hero, enemy, level);
+    if (hasPassiveKind(level, hero, "slow")) {
+      addStatusEffect(mutations, enemy.id, { type: "slow", remainingTicks: msToTicks(DEFAULT_PASSIVE_SLOW_MS, level), speedMultiplier: 0.8, sourceHeroId: hero.id });
+    }
+  });
   return applyEnemyMutations(enemies, mutations, level);
 }
 
 function applyMoonbladeSkill(enemies: readonly Enemy[], hero: Hero, target: Enemy, level: LevelConfig | undefined, config: HeroConfig): SkillApplicationResult {
   const mutations = new Map<string, PendingEnemyMutation>();
-  const targets = selectChainTargets(enemies, target, 1 + (config.skillBounceCount ?? DEFAULT_MOONBLADE_BOUNCE_COUNT), config.skillJumpRadius ?? DEFAULT_STORM_JUMP_RADIUS);
+  const passiveBonusBounces = hasPassiveKind(level, hero, "cleave") ? 1 : 0;
+  const targets = selectChainTargets(enemies, target, 1 + passiveBonusBounces + (config.skillBounceCount ?? DEFAULT_MOONBLADE_BOUNCE_COUNT), config.skillJumpRadius ?? DEFAULT_STORM_JUMP_RADIUS);
   const decay = config.skillBounceDecay ?? DEFAULT_MOONBLADE_BOUNCE_DECAY;
   const bonus = config.skillBonusDamageVsStatusMultiplier ?? DEFAULT_MOONBLADE_BONUS_DAMAGE_VS_STATUS;
-  targets.forEach((enemy, index) => addDamage(mutations, enemy.id, Math.round(getSkillDamage(level, hero) * Math.pow(decay, index) * (hasControlStatus(enemy) ? bonus : 1))));
+  targets.forEach((enemy, index) => {
+    addDamage(mutations, enemy.id, Math.round(getSkillDamageAgainst(level, hero, enemy) * Math.pow(decay, index) * (hasControlStatus(enemy) ? bonus : 1)));
+    addPassiveOnHitEffects(mutations, hero, enemy, level);
+  });
   return applyEnemyMutations(enemies, mutations, level);
+}
+
+function addPassiveOnHitEffects(mutations: Map<string, PendingEnemyMutation>, hero: Hero, enemy: Enemy, level?: LevelConfig): void {
+  if (hasPassiveKind(level, hero, "slow")) {
+    addStatusEffect(mutations, enemy.id, { type: "slow", remainingTicks: msToTicks(DEFAULT_PASSIVE_SLOW_MS, level), speedMultiplier: 0.8, sourceHeroId: hero.id });
+  }
+  if (hasPassiveKind(level, hero, "freeze") && hasControlStatus(enemy)) {
+    addStatusEffect(mutations, enemy.id, { type: "stun", remainingTicks: msToTicks(DEFAULT_PASSIVE_FREEZE_MS, level), speedMultiplier: 0, sourceHeroId: hero.id });
+  }
+  if (hasPassiveKind(level, hero, "burn")) {
+    addStatusEffect(mutations, enemy.id, { type: "burn", remainingTicks: msToTicks(DEFAULT_PASSIVE_BURN_MS, level), damagePerTick: DEFAULT_PASSIVE_DOT_DAMAGE, sourceHeroId: hero.id });
+  }
+  if (hasPassiveKind(level, hero, "poison")) {
+    addStatusEffect(mutations, enemy.id, { type: "poison", remainingTicks: msToTicks(DEFAULT_PASSIVE_POISON_MS, level), damagePerTick: DEFAULT_PASSIVE_DOT_DAMAGE, sourceHeroId: hero.id });
+  }
 }
 
 function selectChainTargets(enemies: readonly Enemy[], firstTarget: Enemy, maxHits: number, radius: number): readonly Enemy[] {
@@ -311,6 +374,42 @@ function decayStatusEffects(enemy: Enemy): Enemy {
     return enemyWithoutStatusEffects;
   }
   return { ...enemy, statusEffects };
+}
+
+function applyStatusEffectDamage(state: GameState, level?: LevelConfig): GameState {
+  const killCredits = new Map<string, string>();
+  const damagedEnemies = state.enemies.map((enemy) => {
+    const damagingEffects = enemy.statusEffects?.filter((statusEffect) => (statusEffect.damagePerTick ?? 0) > 0 && statusEffect.remainingTicks > 0) ?? [];
+    if (damagingEffects.length === 0) return enemy;
+    const totalDamage = damagingEffects.reduce((sum, statusEffect) => sum + (statusEffect.damagePerTick ?? 0), 0);
+    const sourceHeroId = damagingEffects.find((statusEffect) => statusEffect.sourceHeroId)?.sourceHeroId;
+    if (sourceHeroId) killCredits.set(enemy.id, sourceHeroId);
+    return { ...enemy, health: enemy.health - totalDamage };
+  });
+
+  const killedEnemies = damagedEnemies.filter((enemy) => enemy.health <= 0);
+  if (killedEnemies.length === 0) return { ...state, enemies: damagedEnemies };
+
+  const rewardGold = killedEnemies.reduce((sum, enemy) => sum + getEnemyRewardGold(level, enemy), 0);
+  const killedCarrier = killedEnemies.find((enemy) => enemy.carryingCrystal);
+  const xpByHeroId = new Map<string, number>();
+  for (const enemy of killedEnemies) {
+    const heroId = killCredits.get(enemy.id);
+    const hero = heroId ? state.heroes.find((candidate) => candidate.id === heroId) : undefined;
+    if (!heroId || !hero) continue;
+    xpByHeroId.set(heroId, (xpByHeroId.get(heroId) ?? 0) + getXpPerKill(level, hero));
+  }
+
+  return syncSettlementState({
+    ...state,
+    enemies: damagedEnemies.filter((enemy) => enemy.health > 0),
+    resources: { ...state.resources, gold: state.resources.gold + rewardGold },
+    crystal: killedCarrier ? dropCrystal(state.crystal, killedCarrier, state.clock.tick, level) : state.crystal,
+    heroes: state.heroes.map((hero) => gainHeroExperience(hero, xpByHeroId.get(hero.id) ?? 0, level)),
+    wave: killedEnemies.length > 0 && state.wave.isWaveActive
+      ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + killedEnemies.length }
+      : state.wave,
+  });
 }
 
 function msToTicks(durationMs: number, level?: LevelConfig): number {
@@ -437,19 +536,29 @@ function applyTowerCombat(state: GameState, level?: LevelConfig): GameState {
       const { targetEnemyId: _targetEnemyId, ...untargetedHero } = cooledHero;
       return untargetedHero;
     }
-    let killedEnemy: Enemy | undefined;
-    enemies = enemies.map((enemy) => {
-      if (enemy.id !== target.id) return enemy;
-      const damaged = { ...enemy, health: enemy.health - config.attackDamage };
-      if (damaged.health <= 0) killedEnemy = damaged;
-      return damaged;
-    }).filter((enemy) => enemy.health > 0);
+
+    const mutations = new Map<string, PendingEnemyMutation>();
+    addDamage(mutations, target.id, getAttackDamageAgainst(level, cooledHero, target, config.attackDamage));
+    addPassiveOnHitEffects(mutations, cooledHero, target, level);
+    if (hasPassiveKind(level, cooledHero, "lightning-chain")) {
+      const chainTarget = selectChainTargets(enemies, target, 2, DEFAULT_PASSIVE_CHAIN_RADIUS)[1];
+      if (chainTarget) addDamage(mutations, chainTarget.id, Math.round(config.attackDamage * 0.5));
+    }
+    if (hasPassiveKind(level, cooledHero, "cleave")) {
+      for (const enemy of enemies) {
+        if (enemy.id === target.id || distance(enemy.position, target.position) > DEFAULT_PASSIVE_CLEAVE_RADIUS) continue;
+        addDamage(mutations, enemy.id, Math.round(config.attackDamage * 0.35));
+      }
+    }
+
+    const result = applyEnemyMutations(enemies, mutations, level);
+    enemies = [...result.enemies];
     let nextHero: Hero = { ...cooledHero, attackCooldownMs: config.attackIntervalMs, targetEnemyId: target.id };
-    if (killedEnemy) {
-      rewardGold += getEnemyRewardGold(level, killedEnemy);
-      killedCount += 1;
-      if (killedEnemy.carryingCrystal) killedCarrier = killedEnemy;
-      nextHero = gainHeroExperience(nextHero, getXpPerKill(level, nextHero), level);
+    if (result.killedEnemies.length > 0) {
+      rewardGold += result.killedEnemies.reduce((sum, enemy) => sum + getEnemyRewardGold(level, enemy), 0);
+      killedCount += result.killedEnemies.length;
+      if (!killedCarrier) killedCarrier = result.killedEnemies.find((enemy) => enemy.carryingCrystal);
+      nextHero = gainHeroExperience(nextHero, result.killedEnemies.length * getXpPerKill(level, nextHero), level);
     }
     return nextHero;
   });
@@ -637,7 +746,8 @@ function advanceWave(state: GameState, level?: LevelConfig): Pick<GameState, "en
 function advanceRunningTick(state: GameState, level?: LevelConfig): GameState {
   const preparedState = prepareWaveForTick(state, level);
   const waveAdvanced = advanceWave(preparedState, level);
-  const movedState = { ...preparedState, enemies: waveAdvanced.enemies.map((enemy) => decayStatusEffects(advanceEnemyAlongPath(enemy, level))), wave: waveAdvanced.wave };
+  const statusDamageState = applyStatusEffectDamage({ ...preparedState, enemies: waveAdvanced.enemies, wave: waveAdvanced.wave }, level);
+  const movedState = { ...statusDamageState, enemies: statusDamageState.enemies.map((enemy) => decayStatusEffects(advanceEnemyAlongPath(enemy, level))) };
   const combatState = applyTowerCombat(movedState, level);
   const autoCastState = applyAutoCastSkills(combatState, level);
   const crystalAdvanced = advanceReturningCrystal(autoCastState, level);

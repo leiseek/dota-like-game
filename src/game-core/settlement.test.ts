@@ -73,7 +73,7 @@ test("victory star rating scales from remaining crystals", () => {
   assert.equal(oneStar.settlement.remainingCrystals, 1);
 });
 
-test("carrier escape creates a zero-star defeat settlement", () => {
+test("carrier escape creates a zero-star defeat settlement after deducting one crystal", () => {
   const shortLevel = {
     ...tutorialLevel,
     fixedDeltaMs: 100,
@@ -93,17 +93,20 @@ test("carrier escape creates a zero-star defeat settlement", () => {
     maxHealth: 50,
     carryingCrystal: false,
   };
+  const initial = createInitialGameState(shortLevel);
   const primed = enqueueAction(
-    enqueueAction(enqueueAction(createInitialGameState(shortLevel), { type: "START" }), { type: "SET_SPEED", speed: 10 }),
+    enqueueAction(enqueueAction(initial, { type: "START" }), { type: "SET_SPEED", speed: 10 }),
     { type: "SPAWN_ENEMY", enemy },
   );
 
   const escaped = stepSimulation(primed, 1, shortLevel);
 
   assert.equal(escaped.status, "lost");
+  assert.equal(escaped.baseHealth, initial.baseHealth - 1);
   assert.equal(escaped.settlement.outcome, "defeat");
   assert.equal(escaped.settlement.reason, "crystal-escaped");
   assert.equal(escaped.settlement.stars, 0);
+  assert.equal(escaped.settlement.remainingCrystals, initial.baseHealth - 1);
   assert.equal(escaped.settlement.escapedCrystals, 1);
 });
 
@@ -154,7 +157,7 @@ test("cleared waves do not settle while a dropped crystal is still returning", (
 
   const returning = stepSimulation(
     enqueueAction(withCarrier, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }),
-    1,
+    0,
     returnLevel,
   );
 
@@ -162,7 +165,7 @@ test("cleared waves do not settle while a dropped crystal is still returning", (
   assert.equal(returning.settlement.outcome, "pending");
   assert.equal(returning.crystal.status, "returning");
 
-  const completed = stepSimulation(returning, 4, returnLevel);
+  const completed = stepSimulation(returning, 6, returnLevel);
   assert.equal(completed.status, "won");
   assert.equal(completed.settlement.outcome, "victory");
   assert.equal(completed.crystal.status, "recovered");

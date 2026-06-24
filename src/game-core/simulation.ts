@@ -697,6 +697,7 @@ function resolveCrystalAndBase(state: GameState, advancedEnemies: readonly Enemy
 
   for (const enemy of advancedEnemies) {
     if (enemy.carryingCrystal && enemy.pathIndex === 0 && enemy.progress <= 0) {
+      baseHealth = Math.max(0, baseHealth - 1);
       status = "lost";
       crystal = escapeCrystal(crystal, enemy.id, state.clock.tick);
       enemies.push({ ...enemy, progress: 0 });

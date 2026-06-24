@@ -30,6 +30,17 @@ export function createInitialGameState(level: LevelConfig): GameState {
       recoveredCount: 0,
       escapedCount: 0,
     },
+    settlement: {
+      outcome: "pending",
+      reason: "none",
+      isComplete: false,
+      stars: 0,
+      remainingCrystals: level.baseHealth,
+      maxCrystals: level.baseHealth,
+      recoveredCrystals: 0,
+      stolenCrystals: 0,
+      escapedCrystals: 0,
+    },
     heroes: level.startingHeroes.map((hero, index) => ({
       ...hero,
       id: `hero-${index + 1}`,

@@ -9,7 +9,7 @@
     "build:web": "npm run build && tsc -p platform-web/tsconfig.json",
     "build:pages": "npm run build:web && node scripts/build-pages.mjs",
     "preview:web": "npm run build:web && node platform-web/dev-server.mjs",
-    "check": "npm run build && node --test dist/game-core/simulation.test.js dist/game-core/crystal.test.js dist/game-core/settlement.test.js"
+    "check": "npm run build && npm run test && tsc -p platform-web/tsconfig.json"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

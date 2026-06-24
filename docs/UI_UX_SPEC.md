@@ -1,10 +1,10 @@
 ---
 doc_id: UI_UX_SPEC
-version: 0.2.0
+version: 0.4.3
 status: active
 owner_agent: UX/UI Agent
-last_updated: 2026-06-23
-change_summary: battle HUD and interaction spec
+last_updated: 2026-06-24
+change_summary: settlement result display added
 ---
 
 # UI / UX Spec
@@ -17,7 +17,8 @@ Make Demo 0.1 playable and clear on mobile, with tower-defense must-have control
 - exit resume;
 - 1x/2x/5x/10x;
 - active skill targeting;
-- clear crystal theft feedback.
+- clear crystal theft feedback;
+- clear win/lose/star settlement.
 
 ## Orientation
 
@@ -47,12 +48,13 @@ Logical canvas:
 
 | Element | Persistent | Notes |
 |---|---|---|
-| Crystals | yes | most important resource |
+| Crystals | yes | most important resource; also shows crystal state |
 | Gold | yes | build and upgrade |
 | Mana Crystal | yes | active skills |
 | Wave | yes | progress |
 | Pause | yes | top right |
 | Speed | yes | top right |
+| Settlement status | only when complete | result, stars, and remaining crystals |
 
 ## Speed Interaction
 
@@ -169,6 +171,25 @@ Prompt:
 An enemy stole a crystal. Defeat it to recover.
 ```
 
+## Settlement Result
+
+When the battle completes, show an overlay:
+
+```text
+Victory / Defeat
+Stars: ★★★
+Reason: all waves cleared / crystal escaped / base crystals depleted
+Remaining crystals: 8 / 12
+```
+
+Demo 0.1 settlement display rules:
+
+- victory with all crystals: 3 stars;
+- victory with at least 50% crystals: 2 stars;
+- victory with at least 1 crystal: 1 star;
+- defeat: 0 stars;
+- settlement data must come from `HudState.settlement`, not ad hoc UI calculation.
+
 ## Self Review
 
 ### Strengths
@@ -176,10 +197,12 @@ An enemy stole a crystal. Defeat it to recover.
 - pause and speed are persistent;
 - selected-hero skill panel avoids global skill bar overload;
 - resume prompt gives enough context;
-- skill targeting is extensible.
+- skill targeting is extensible;
+- settlement result is easy to validate in Web Preview.
 
 ### Risks
 
 - selected-hero-only skill casting may feel slow to expert players;
 - speed cycling may cause accidental 10x;
-- bottom panel may cover lower tower slots.
+- bottom panel may cover lower tower slots;
+- star thresholds need playtest tuning.

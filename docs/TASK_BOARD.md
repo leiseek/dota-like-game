@@ -1,10 +1,10 @@
 ---
 doc_id: TASK_BOARD
-version: 0.6.0
+version: 0.6.1
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: GitHub Pages Web Preview deployment added
+change_summary: branch-based GitHub Pages PR preview deployment clarified
 ---
 
 # Task Board
@@ -57,7 +57,8 @@ change_summary: GitHub Pages Web Preview deployment added
 | Task ID | Title | Owner Agent | Status | Acceptance Summary |
 |---|---|---|---|---|
 | WEB-001 | Web Playtest Preview shell | Platform Web + Engineering | Done | zero-dependency Canvas preview renders Level 001 state, dispatches GameAction controls, supports build/select/cast, pause/resume, 1x/2x/5x/10x, start-next-wave, and local snapshot continue |
-| WEB-DEPLOY-001 | GitHub Pages Web Preview deployment | Platform Web + Engineering | Done | push to main runs check, builds Pages artifact, and deploys Web Preview to GitHub Pages through Actions |
+| WEB-DEPLOY-001 | GitHub Pages Web Preview deployment | Platform Web + Engineering | Done | push to main runs check, builds Pages artifact, and deploys root Web Preview through the `gh-pages` branch |
+| WEB-PR-PREVIEW-001 | per-PR Web Preview URLs | Platform Web + Engineering | Done | PRs build and publish isolated preview folders under `gh-pages/pr-<PR_NUMBER>/` and comment the URL |
 
 ## Demo 0.1 Core Tasks
 
@@ -86,14 +87,14 @@ Unless the Project Owner explicitly asks to pause, continue implementing Demo 0.
 
 ## Current Implementation Note
 
-Demo 0.1 P0 core loop is now on `main`. GitHub Pages deployment is configured for Web Preview testing after pushes to `main`. Next step is to enable Pages source as GitHub Actions in repository settings if not already enabled, merge the deployment PR, and test the deployed URL.
+Demo 0.1 P0 core loop is now on `main`. Pages deployment should use `Deploy from a branch` with branch `gh-pages` and folder `/ (root)` so root preview and PR preview folders can coexist. After merging the deployment fix, test the root preview and then open a small PR to validate the `pr-<PR_NUMBER>` preview flow.
 
 ## Self Review
 
 Review Result: Pass
 
-Main Issues: Actual Pages deployment still requires repository settings and the post-merge Actions run to succeed.
+Main Issues: Per-PR preview URLs require branch-based Pages source; official `actions/deploy-pages` PR previews are not publicly available.
 
-Required Changes: After merge, verify the Actions deployment and test `https://leiseek.github.io/dota-like-game/`.
+Required Changes: Set Pages to `Deploy from a branch`, branch `gh-pages`, root folder after the workflow creates the branch.
 
 Risk Level: Medium

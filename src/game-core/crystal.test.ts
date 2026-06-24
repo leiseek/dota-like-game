@@ -175,7 +175,7 @@ test("a monster can intercept a returning crystal and immediately become the new
   assert.equal(newCarrier?.carryingCrystal, true);
 });
 
-test("endpoint monsters wait instead of disappearing while the crystal is unavailable", () => {
+test("endpoint monsters leave without camping when the crystal is unavailable", () => {
   const initial = createInitialGameState(straightLevel);
   const endpointEnemy: Enemy = {
     id: "enemy-2",
@@ -188,7 +188,7 @@ test("endpoint monsters wait instead of disappearing while the crystal is unavai
     carryingCrystal: false,
   };
 
-  const waiting = stepSimulation(
+  const noCrystalAtBase = stepSimulation(
     enqueueAction(
       {
         ...initial,
@@ -197,11 +197,15 @@ test("endpoint monsters wait instead of disappearing while the crystal is unavai
         crystal: {
           ...initial.crystal,
           atBase: false,
-          status: "carried",
-          carrierEnemyId: "enemy-1",
-          lastCarrierEnemyId: "enemy-1",
-          lastEvent: { type: "stolen", tick: 0, enemyId: "enemy-1" },
+          status: "returning",
+          position: { x: 50, y: 0 },
+          pathIndex: 0,
+          progress: 0.5,
+          returnSpeedUnitsPerSecond: 10,
+          lastDroppedEnemyId: "enemy-1",
+          lastEvent: { type: "dropped", tick: 0, enemyId: "enemy-1" },
           stolenCount: 1,
+          droppedCount: 1,
         },
       },
       { type: "SPAWN_ENEMY", enemy: endpointEnemy },
@@ -210,12 +214,16 @@ test("endpoint monsters wait instead of disappearing while the crystal is unavai
     straightLevel,
   );
 
-  assert.equal(waiting.status, "running");
-  assert.equal(waiting.baseHealth, straightLevel.baseHealth);
-  assert.equal(waiting.enemies.length, 1);
-  assert.equal(waiting.enemies[0]?.id, "enemy-2");
-  assert.equal(waiting.enemies[0]?.carryingCrystal, false);
-  assert.equal(waiting.enemies[0]?.progress, 1);
+  assert.equal(noCrystalAtBase.status, "running");
+  assert.equal(noCrystalAtBase.baseHealth, straightLevel.baseHealth);
+  assert.equal(noCrystalAtBase.enemies.length, 0);
+  assert.equal(noCrystalAtBase.crystal.status, "returning");
+  assert.equal(noCrystalAtBase.crystal.carrierEnemyId, undefined);
+
+  const recovered = stepSimulation(noCrystalAtBase, 6, straightLevel);
+  assert.equal(recovered.crystal.status, "recovered");
+  assert.equal(recovered.enemies.length, 0);
+  assert.equal(recovered.crystal.stolenCount, 1);
 });
 
 test("a carrier escaping with the crystal deducts exactly one crystal at the start", () => {

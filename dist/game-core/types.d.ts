@@ -5,11 +5,12 @@ export type Vector2 = Readonly<{
 }>;
 export type GameSpeed = 1 | 2 | 5 | 10;
 export type GameStatus = "ready" | "running" | "paused" | "won" | "lost";
-export type StatusEffectType = "slow" | "stun";
+export type StatusEffectType = "slow" | "stun" | "burn" | "poison";
 export type StatusEffectState = Readonly<{
     type: StatusEffectType;
     remainingTicks: number;
     speedMultiplier?: number;
+    damagePerTick?: number;
     sourceHeroId?: EntityId;
 }>;
 export type SkillKind = "direct-damage" | "hook" | "frost" | "storm-chain" | "moonblade";

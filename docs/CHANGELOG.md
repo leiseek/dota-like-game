@@ -1,13 +1,91 @@
 ---
 doc_id: CHANGELOG
-version: 0.3.6
+version: 0.3.10
 status: active
 owner_agent: Team Leader Agent
-last_updated: 2026-06-23
-change_summary: auto combat recorded
+last_updated: 2026-06-24
+change_summary: active skill foundation recorded
 ---
 
 # Changelog
+
+## [0.3.10] - 2026-06-24
+
+### Added
+
+- Added per-hero active skill mana cost, cooldown, and damage values to Level 001 hero configs.
+- Added `CAST_SKILL` handling for target validation, mana checks, configured damage, configured cooldown ticks, gold rewards on skill kills, and crystal recovery on carrier kills.
+- Added regression coverage for Level 001 skill mana spend, configured damage, cooldown, invalid target rejection, cooldown recast rejection, and insufficient mana rejection.
+- Added the next Demo 0.1 task slice to the task board, with `SKILL-001` complete and `SKILL-002` next.
+
+### Changed
+
+- Advanced active skills from a hardcoded placeholder damage action to a data-driven resource/cooldown foundation.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Hero-specific skill shapes and combos are still pending.
+Required Changes: Continue with `SKILL-002` hero-specific active skill effects.
+Risk Level: Medium
+
+## [0.3.9] - 2026-06-24
+
+### Added
+
+- Added `PHASE_1_TECHNICAL_REVIEW.md` with the REVIEW-002 technical review for the game-core foundation.
+- Recorded evidence for build/test status, platform-boundary scan, GameState/snapshot behavior, fixed tick, Level 001 data, enemy movement, combat, HUD, and Battle Snapshot restore.
+- Captured follow-up risks for hero-specific active skills, explicit crystal recovery state, obstacle destruction, settlement, snapshot validation, and 10x stress testing.
+
+### Changed
+
+- Marked `REVIEW-002` done and closed the current Phase 1 core foundation task sequence.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Demo 0.1 gameplay systems beyond the core foundation remain pending.
+Required Changes: Start the next prioritized Demo 0.1 implementation slice while preserving core-first architecture.
+Risk Level: Medium
+
+## [0.3.8] - 2026-06-24
+
+### Added
+
+- Added restore-to-paused Battle Snapshot behavior for unfinished battles.
+- Added pending-action clearing during snapshot restore so resume confirmation cannot accidentally replay stale input.
+- Added regression coverage for paused restore state, preserved simulation data, and no-tick progression while restored state is awaiting resume.
+
+### Changed
+
+- Marked `SAVE-001` done and identified `REVIEW-002` as the next required continuation.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Phase 1 Technical Review remains pending.
+Required Changes: Continue with `REVIEW-002` in board order.
+Risk Level: Medium
+
+## [0.3.7] - 2026-06-24
+
+### Added
+
+- Added a platform-neutral HUD selector derived from authoritative `GameState`.
+- Added HUD read-model fields for crystals, max crystals, gold, mana crystal, wave progress, pause/resume availability, start-next-wave availability, and 1x/2x/5x/10x speed options.
+- Added max base crystal tracking to `GameState` so HUD display does not infer maximum crystals from mutable current crystal state.
+- Added regression coverage for initial HUD top-bar values and running speed/control state.
+
+### Changed
+
+- Marked `HUD-001` done and identified `SAVE-001` as the next required continuation.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Battle Snapshot restore-to-paused behavior remains pending.
+Required Changes: Continue with `SAVE-001`, then `REVIEW-002` in board order.
+Risk Level: Medium
 
 ## [0.3.6] - 2026-06-23
 

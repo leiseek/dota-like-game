@@ -1,10 +1,10 @@
 ---
 doc_id: DOC_VERSION_INDEX
-version: 0.3.6
+version: 0.3.10
 status: active
 owner_agent: Team Leader Agent
-last_updated: 2026-06-23
-change_summary: v0.3.6 combat status updates
+last_updated: 2026-06-24
+change_summary: v0.3.10 active skill foundation status updates
 ---
 
 # Document Version Index
@@ -18,6 +18,7 @@ change_summary: v0.3.6 combat status updates
 | AGENT_TEAM.md | 0.1.0 | active | AI Workflow Agent | AI Agent Team roles |
 | SELF_REVIEW_PROCESS.md | 0.1.0 | active | Self Review Agent | Self Review Gate process |
 | PHASE_0_SELF_REVIEW.md | 0.2.0 | active | Self Review Agent | Phase 0 review result |
+| PHASE_1_TECHNICAL_REVIEW.md | 0.1.0 | active | Self Review Agent | Phase 1 game-core technical review |
 | PLATFORM_STRATEGY.md | 0.1.0 | active | Platform Strategy Agent | HarmonyOS + WeChat Mini Game strategy |
 | TECH_ARCHITECTURE.md | 0.2.0 | active | Technical Architect Agent | core-first architecture |
 | GAME_STATE_SCHEMA.md | 0.2.0 | active | Technical Architect Agent | serializable battle state |
@@ -25,9 +26,9 @@ change_summary: v0.3.6 combat status updates
 | HERO_DESIGN.md | 0.2.0 | active | Combat Designer Agent | first hero set |
 | UI_UX_SPEC.md | 0.2.0 | active | UX/UI Agent | battle HUD and controls |
 | ROADMAP.md | 0.1.0 | active | Executive Producer Agent | phase roadmap |
-| TASK_BOARD.md | 0.3.6 | active | Team Leader Agent | COMBAT-001 complete; HUD-001 next |
+| TASK_BOARD.md | 0.3.10 | active | Team Leader Agent | SKILL-001 complete; SKILL-002 next |
 | DECISIONS.md | 0.3.0 | active | Team Leader Agent | ADR-0005 added |
-| CHANGELOG.md | 0.3.6 | active | Team Leader Agent | Auto combat recorded |
+| CHANGELOG.md | 0.3.10 | active | Team Leader Agent | Active skill foundation recorded |
 
 ## Status Definitions
 

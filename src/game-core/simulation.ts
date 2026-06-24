@@ -1,7 +1,8 @@
 import type { Enemy, GameAction, GameState, Hero, LevelConfig, WaveRuntimeState } from "./types.js";
 
-const HERO_SKILL_DAMAGE = 25;
-const HERO_SKILL_COOLDOWN_TICKS = 10;
+const DEFAULT_HERO_SKILL_DAMAGE = 25;
+const DEFAULT_HERO_SKILL_COOLDOWN_TICKS = 10;
+const DEFAULT_HERO_SKILL_MANA_COST = 0;
 const DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND = 75;
 
 function applyAction(state: GameState, action: GameAction, level?: LevelConfig): GameState {
@@ -29,7 +30,7 @@ function applyAction(state: GameState, action: GameAction, level?: LevelConfig):
     case "SPAWN_ENEMY":
       return { ...state, enemies: [...state.enemies, action.enemy] };
     case "CAST_SKILL":
-      return castSkill(state, action.heroId, action.targetEnemyId);
+      return castSkill(state, action.heroId, action.targetEnemyId, level);
   }
 }
 
@@ -67,24 +68,50 @@ function buildHero(state: GameState, slotId: string, heroArchetype: string, leve
   };
 }
 
-function castSkill(state: GameState, heroId: string, targetEnemyId: string): GameState {
-  const hero = state.heroes.find((candidate) => candidate.id === heroId);
-  if (!hero || hero.cooldownTicksRemaining > 0) return state;
+function getSkillCooldownTicks(level: LevelConfig | undefined, hero: Hero, fixedDeltaMs: number): number {
+  const config = getHeroConfig(level, hero);
+  if (!config?.skillCooldownMs) return DEFAULT_HERO_SKILL_COOLDOWN_TICKS;
+  return Math.max(1, Math.ceil(config.skillCooldownMs / fixedDeltaMs));
+}
 
+function getSkillManaCost(level: LevelConfig | undefined, hero: Hero): number {
+  return getHeroConfig(level, hero)?.skillManaCost ?? DEFAULT_HERO_SKILL_MANA_COST;
+}
+
+function getSkillDamage(level: LevelConfig | undefined, hero: Hero): number {
+  return getHeroConfig(level, hero)?.skillDamage ?? DEFAULT_HERO_SKILL_DAMAGE;
+}
+
+function castSkill(state: GameState, heroId: string, targetEnemyId: string, level?: LevelConfig): GameState {
+  const hero = state.heroes.find((candidate) => candidate.id === heroId);
+  const target = state.enemies.find((candidate) => candidate.id === targetEnemyId);
+  if (!hero || !target || hero.cooldownTicksRemaining > 0) return state;
+
+  const manaCost = getSkillManaCost(level, hero);
+  if (state.resources.manaCrystal < manaCost) return state;
+
+  const skillDamage = getSkillDamage(level, hero);
   const damagedEnemies = state.enemies.map((enemy) =>
-    enemy.id === targetEnemyId ? { ...enemy, health: enemy.health - HERO_SKILL_DAMAGE } : enemy,
+    enemy.id === targetEnemyId ? { ...enemy, health: enemy.health - skillDamage } : enemy,
   );
+  const killedEnemies = damagedEnemies.filter((enemy) => enemy.health <= 0);
   const enemies = damagedEnemies.filter((enemy) => enemy.health > 0);
-  const killedTarget = damagedEnemies.some((enemy) => enemy.id === targetEnemyId && enemy.health <= 0);
-  const killedCarrier = damagedEnemies.some(
-    (enemy) => enemy.id === targetEnemyId && enemy.health <= 0 && enemy.carryingCrystal,
-  );
+  const killedTarget = killedEnemies.some((enemy) => enemy.id === targetEnemyId);
+  const killedCarrier = killedEnemies.some((enemy) => enemy.id === targetEnemyId && enemy.carryingCrystal);
+  const rewardGold = killedEnemies.reduce((sum, enemy) => sum + getEnemyRewardGold(level, enemy), 0);
 
   return {
     ...state,
     crystal: killedCarrier ? { atBase: true } : state.crystal,
+    resources: {
+      ...state.resources,
+      gold: state.resources.gold + rewardGold,
+      manaCrystal: state.resources.manaCrystal - manaCost,
+    },
     heroes: state.heroes.map((candidate) =>
-      candidate.id === heroId ? { ...candidate, cooldownTicksRemaining: HERO_SKILL_COOLDOWN_TICKS } : candidate,
+      candidate.id === heroId
+        ? { ...candidate, cooldownTicksRemaining: getSkillCooldownTicks(level, candidate, state.clock.fixedDeltaMs) }
+        : candidate,
     ),
     enemies,
     wave: killedTarget && state.wave.isWaveActive

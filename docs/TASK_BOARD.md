@@ -1,10 +1,10 @@
 ---
 doc_id: TASK_BOARD
-version: 0.3.6
+version: 0.3.10
 status: active
 owner_agent: Team Leader Agent
-last_updated: 2026-06-23
-change_summary: COMBAT-001 auto targeting and basic attacks completed
+last_updated: 2026-06-24
+change_summary: SKILL-001 active skill resource and cooldown foundation completed
 ---
 
 # Task Board
@@ -48,9 +48,18 @@ change_summary: COMBAT-001 auto targeting and basic attacks completed
 | WAVE-001 | wave system | Engineering | Done | START_NEXT_WAVE, timed auto-start, deterministic spawning, kill counts, and final-wave victory covered by tests |
 | TOWER-001 | build hero tower | Engineering | Done | BUILD_HERO validates hero config, gold cost, unlocked slot, and slot occupancy |
 | COMBAT-001 | auto target and basic attack | Engineering | Done | hero tower target selection, attack cooldowns, enemy HP/death, gold rewards, and wave kill counts covered by tests |
-| HUD-001 | minimal HUD | UX/UI + Engineering | Todo | crystals, gold, mana, wave, pause, speed |
-| SAVE-001 | minimal Battle Snapshot | Engineering | Todo | restore to paused state |
-| REVIEW-002 | Phase 1 Technical Review | Self Review | Todo | GameClock + GameState pass review |
+| HUD-001 | minimal HUD | UX/UI + Engineering | Done | platform-neutral HUD selector exposes crystals, gold, mana, wave, pause/resume availability, and 1x/2x/5x/10x speed state |
+| SAVE-001 | minimal Battle Snapshot | Engineering | Done | restore unfinished snapshots to paused state, preserve simulation data, and clear pending actions before resume confirmation |
+| REVIEW-002 | Phase 1 Technical Review | Self Review | Done | Phase 1 game-core foundation accepted with medium follow-up risk; see PHASE_1_TECHNICAL_REVIEW.md |
+
+## Next Demo 0.1 Tasks
+
+| Task ID | Title | Owner Agent | Status | Acceptance Summary |
+|---|---|---|---|---|
+| SKILL-001 | active skill resource and cooldown foundation | Engineering | Done | CAST_SKILL uses per-hero mana cost, cooldown, configured damage, target validation, reward payout, carrier recovery, and rejection tests |
+| SKILL-002 | hero-specific active skill effects | Engineering + Combat | Todo | hook pull/stun, frost road slow, storm chain jumps, moonblade burst/bounces, and ice-lightning combo |
+| CRYSTAL-001 | explicit crystal recovery runtime state | Engineering | Todo | stolen/dropped/recovered crystals are represented in GameState and HUD |
+| SETTLEMENT-001 | win/lose/star settlement | Engineering + UX | Todo | settlement state and star rating based on remaining crystals |
 
 ## Execution Policy
 
@@ -58,11 +67,11 @@ Unless the Project Owner explicitly asks to pause, continue implementing Phase 1
 
 ## Current Implementation Note
 
-`MAP-001`, `WAVE-001`, `ENEMY-001`, `TOWER-001`, and `COMBAT-001` are now complete for the current core foundation. Continue directly with the next Todo Phase 1 P0 task in board order unless blocked; the current next task is `HUD-001` minimal HUD state/adapter surface.
+`MAP-001`, `WAVE-001`, `ENEMY-001`, `TOWER-001`, `COMBAT-001`, `HUD-001`, `SAVE-001`, `REVIEW-002`, and `SKILL-001` are complete. Continue with `SKILL-002` hero-specific active skill effects unless the owner reprioritizes crystal recovery or settlement work.
 
 ## Self Review
 
 Review Result: Pass
-Main Issues: Minimal HUD state/adapter surface and Battle Snapshot restore-to-paused behavior are still pending; obstacle destruction behavior is data-only and not interactable yet.
-Required Changes: Continue with `HUD-001`, then `SAVE-001` and `REVIEW-002` in board order.
+Main Issues: Hero-specific active skill effects, explicit crystal recovery state, obstacle destruction, settlement, and stronger snapshot validation remain follow-up work for Demo 0.1.
+Required Changes: Continue with `SKILL-002` while preserving core-first architecture and serializable GameState.
 Risk Level: Medium

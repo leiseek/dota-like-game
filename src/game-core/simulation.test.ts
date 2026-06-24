@@ -8,6 +8,7 @@ import {
   restoreSnapshot,
   stepSimulation,
   level001Config,
+  selectHudState,
   tutorialLevel,
   type Enemy,
 } from "./index.js";
@@ -51,12 +52,29 @@ test("speed multiplier controls fixed tick count deterministically", () => {
   assert.equal(advanced.clock.tick, 5);
 });
 
-test("snapshots restore the exact game state", () => {
+test("snapshots restore unfinished battles into a paused state", () => {
   const initial = createInitialGameState(tutorialLevel);
   const withEnemy = enqueueAction(enqueueAction(initial, { type: "START" }), { type: "SPAWN_ENEMY", enemy });
   const advanced = stepSimulation(withEnemy, 3);
   const restored = restoreSnapshot(createSnapshot(advanced));
-  assert.deepEqual(restored, advanced);
+
+  assert.equal(advanced.status, "running");
+  assert.equal(advanced.clock.paused, false);
+  assert.equal(restored.status, "paused");
+  assert.equal(restored.clock.paused, true);
+  assert.equal(restored.clock.tick, advanced.clock.tick);
+  assert.deepEqual(restored.enemies, advanced.enemies);
+});
+
+test("snapshot restore clears pending actions before resume confirmation", () => {
+  const running = stepSimulation(enqueueAction(createInitialGameState(tutorialLevel), { type: "START" }));
+  const withPendingPause = enqueueAction(running, { type: "PAUSE" });
+  const restored = restoreSnapshot(createSnapshot(withPendingPause));
+
+  assert.equal(restored.status, "paused");
+  assert.equal(restored.clock.paused, true);
+  assert.equal(restored.pendingActions.length, 0);
+  assert.equal(stepSimulation(restored).clock.tick, running.clock.tick);
 });
 
 test("hero skills are deterministic GameAction effects", () => {
@@ -69,6 +87,73 @@ test("hero skills are deterministic GameAction effects", () => {
   );
   assert.equal(afterSkill.enemies[0]?.health, 25);
   assert.equal(afterSkill.heroes[0]?.cooldownTicksRemaining, 9);
+});
+
+test("Level 001 active skills spend mana, use configured damage, and enter cooldown", () => {
+  const initial = createInitialGameState(level001Config);
+  const built = stepSimulation(
+    enqueueAction(initial, { type: "BUILD_HERO", slotId: "T01", heroArchetype: "storm-sigilist" }),
+    1,
+    level001Config,
+  );
+  const target = {
+    ...enemy,
+    archetype: "rift-grunt",
+    health: 100,
+    maxHealth: 100,
+    position: { x: 150, y: 190 },
+  };
+  const withEnemy = stepSimulation(enqueueAction(built, { type: "SPAWN_ENEMY", enemy: target }), 1, level001Config);
+  const afterSkill = stepSimulation(
+    enqueueAction(withEnemy, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }),
+    1,
+    level001Config,
+  );
+
+  assert.equal(afterSkill.resources.manaCrystal, 55);
+  assert.equal(afterSkill.enemies[0]?.health, 5);
+  assert.equal(afterSkill.heroes[0]?.cooldownTicksRemaining, Math.ceil(20000 / level001Config.fixedDeltaMs));
+});
+
+test("active skills reject invalid targets, cooldown recasts, and insufficient mana", () => {
+  const initial = createInitialGameState(level001Config);
+  const built = stepSimulation(
+    enqueueAction(initial, { type: "BUILD_HERO", slotId: "T01", heroArchetype: "hook-guardian" }),
+    1,
+    level001Config,
+  );
+  const target = { ...enemy, archetype: "rift-grunt", health: 100, maxHealth: 100 };
+  const withEnemy = stepSimulation(enqueueAction(built, { type: "SPAWN_ENEMY", enemy: target }), 1, level001Config);
+
+  const invalidTarget = stepSimulation(
+    enqueueAction(withEnemy, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "missing-enemy" }),
+    1,
+    level001Config,
+  );
+  assert.equal(invalidTarget.resources.manaCrystal, 100);
+  assert.equal(invalidTarget.heroes[0]?.cooldownTicksRemaining, 0);
+
+  const afterSkill = stepSimulation(
+    enqueueAction(withEnemy, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }),
+    1,
+    level001Config,
+  );
+  const recastDuringCooldown = stepSimulation(
+    enqueueAction(afterSkill, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }),
+    1,
+    level001Config,
+  );
+  assert.equal(recastDuringCooldown.resources.manaCrystal, 65);
+  assert.equal(recastDuringCooldown.enemies[0]?.health, 20);
+
+  const lowManaState = { ...withEnemy, resources: { ...withEnemy.resources, manaCrystal: 34 } };
+  const rejectedLowMana = stepSimulation(
+    enqueueAction(lowManaState, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }),
+    1,
+    level001Config,
+  );
+  assert.equal(rejectedLowMana.resources.manaCrystal, 34);
+  assert.equal(rejectedLowMana.enemies[0]?.health, 100);
 });
 
 test("enemies steal the crystal and lose after carrying it away", () => {
@@ -335,4 +420,40 @@ test("tower kills during active waves increment wave kill count and allow wave c
   assert.equal(spawnedAndKilled.wave.killedCountInWave, 1);
   assert.equal(spawnedAndKilled.resources.gold, 305);
   assert.equal(completed.status, "won");
+});
+
+test("HUD selector exposes top bar resources, wave, pause, and speed state", () => {
+  const initial = createInitialGameState(level001Config);
+  const hud = selectHudState(initial);
+
+  assert.equal(hud.crystals, 12);
+  assert.equal(hud.maxCrystals, 12);
+  assert.equal(hud.gold, 300);
+  assert.equal(hud.manaCrystal, 100);
+  assert.equal(hud.wave.currentWave, 1);
+  assert.equal(hud.wave.totalWaves, 10);
+  assert.equal(hud.isPaused, true);
+  assert.equal(hud.speed, 1);
+  assert.deepEqual(hud.speedOptions.map((option) => option.speed), [1, 2, 5, 10]);
+  assert.equal(hud.speedOptions.find((option) => option.speed === 1)?.isActive, true);
+  assert.equal(hud.canPause, false);
+  assert.equal(hud.canResume, false);
+  assert.equal(hud.canStartNextWave, false);
+});
+
+test("HUD selector reflects running controls without owning battle state", () => {
+  const running = stepSimulation(
+    enqueueAction(enqueueAction(createInitialGameState(level001Config), { type: "START" }), { type: "SET_SPEED", speed: 10 }),
+    0,
+    level001Config,
+  );
+  const hud = selectHudState(running);
+
+  assert.equal(hud.status, "running");
+  assert.equal(hud.isPaused, false);
+  assert.equal(hud.speed, 10);
+  assert.equal(hud.speedOptions.find((option) => option.speed === 10)?.isActive, true);
+  assert.equal(hud.canPause, true);
+  assert.equal(hud.canResume, false);
+  assert.equal(hud.canStartNextWave, true);
 });

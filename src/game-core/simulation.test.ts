@@ -159,13 +159,13 @@ test("active skills reject invalid targets, cooldown recasts, and insufficient m
 test("enemies steal the crystal without deducting it until they escape", () => {
   const initial = createInitialGameState(tutorialLevel);
   const withEnemy = enqueueAction(enqueueAction(initial, { type: "START" }), { type: "SPAWN_ENEMY", enemy });
-  const atCrystal = stepSimulation(withEnemy, 20);
+  const atCrystal = stepSimulation(withEnemy, 2);
   assert.equal(atCrystal.baseHealth, initial.baseHealth);
   assert.equal(atCrystal.crystal.atBase, false);
   assert.equal(atCrystal.crystal.carrierEnemyId, "enemy-1");
   assert.equal(atCrystal.enemies[0]?.carryingCrystal, true);
 
-  const escapedWithCrystal = stepSimulation(atCrystal, 20);
+  const escapedWithCrystal = stepSimulation(atCrystal, 2);
   assert.equal(escapedWithCrystal.status, "lost");
   assert.equal(escapedWithCrystal.baseHealth, initial.baseHealth - 1);
 });
@@ -177,7 +177,7 @@ test("killing a crystal carrier starts a returning crystal instead of instant re
     type: "SPAWN_ENEMY",
     enemy: strongEnemy,
   });
-  const carrier = stepSimulation(withEnemy, 20);
+  const carrier = stepSimulation(withEnemy, 2);
   const afterSkill = stepSimulation(
     enqueueAction(carrier, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }),
   );

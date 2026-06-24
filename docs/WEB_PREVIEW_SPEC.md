@@ -1,10 +1,10 @@
 ---
 doc_id: WEB_PREVIEW_SPEC
-version: 0.1.0
+version: 0.6.0
 status: active
 owner_agent: Platform Web Agent
 last_updated: 2026-06-24
-change_summary: initial Web Playtest Preview shell specification
+change_summary: GitHub Pages deployment added for Web Preview testing
 ---
 
 # Web Preview Spec
@@ -22,7 +22,8 @@ It is not the final product platform. Its purpose is to let the Project Owner an
 - pause/resume;
 - 1x/2x/5x/10x speed;
 - Battle Snapshot save/continue;
-- crystal theft feedback.
+- crystal theft feedback;
+- win/lose/star settlement.
 
 ## Architecture Boundary
 
@@ -54,9 +55,13 @@ platform-web/
   tsconfig.json
   src/
     main.ts
+scripts/
+  build-pages.mjs
+.github/workflows/
+  ci.yml
 ```
 
-## Preview Commands
+## Local Preview Commands
 
 ```bash
 npm run preview:web
@@ -68,6 +73,39 @@ This command:
 2. builds `platform-web/src` into `platform-web/dist`;
 3. starts a zero-dependency local static server;
 4. opens the preview path manually at `/platform-web/`.
+
+## GitHub Pages Deployment
+
+```bash
+npm run build:pages
+```
+
+This command:
+
+1. builds `src/game-core` into `dist/game-core`;
+2. builds `platform-web/src` into `platform-web/dist`;
+3. creates `pages-dist/`;
+4. copies `platform-web/` and `dist/` into the Pages artifact;
+5. writes `.nojekyll`;
+6. writes a root `index.html` that redirects to `./platform-web/`.
+
+GitHub Actions behavior:
+
+- pull requests run `npm run check` only;
+- pushes to `main` run `npm run check` and then deploy `pages-dist/` to GitHub Pages;
+- manual workflow dispatch is available for CI, but Pages deployment only runs on `main` pushes.
+
+Expected test URL after Pages is enabled in repository settings:
+
+```text
+https://leiseek.github.io/dota-like-game/
+```
+
+The root page redirects to:
+
+```text
+https://leiseek.github.io/dota-like-game/platform-web/
+```
 
 ## Implemented Interactions
 
@@ -102,12 +140,12 @@ Review Result: Pass
 Main Issues:
 
 - Web Preview currently uses placeholder Canvas shapes and labels.
-- It depends on `dist/game-core` being built first.
+- Pages deployment depends on repository Pages settings allowing GitHub Actions deployment.
 - It validates interaction flow, not final mobile UX polish.
 
 Required Changes:
 
-- Continue using `GameAction` and `GameState` as the platform boundary.
-- Use the Web Preview to validate `SKILL-002`, `CRYSTAL-001`, and `SETTLEMENT-001` next.
+- Enable GitHub Pages source as GitHub Actions in repository settings.
+- Use the deployed Web Preview for `PLAYTEST-001` smoke testing.
 
 Risk Level: Medium

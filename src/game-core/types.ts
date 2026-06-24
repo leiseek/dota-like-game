@@ -64,6 +64,9 @@ export type HeroConfig = Readonly<{
   attackDamage: number;
   attackIntervalMs: number;
   attackRange: number;
+  skillManaCost?: number;
+  skillCooldownMs?: number;
+  skillDamage?: number;
 }>;
 
 export type ResourceState = Readonly<{
@@ -131,6 +134,7 @@ export type GameState = Readonly<{
   randomSeed: number;
   randomState: number;
   baseHealth: number;
+  maxBaseHealth: number;
   resources: ResourceState;
   crystal: CrystalState;
   heroes: readonly Hero[];
@@ -167,6 +171,35 @@ export type GameAction =
   | Readonly<{ type: "PLACE_HERO"; hero: Hero }>
   | Readonly<{ type: "CAST_SKILL"; heroId: EntityId; targetEnemyId: EntityId }>
   | Readonly<{ type: "SPAWN_ENEMY"; enemy: Enemy }>;
+
+export type HudWaveState = Readonly<{
+  currentWave: number;
+  totalWaves: number;
+  isWaveActive: boolean;
+  isWaitingNextWave: boolean;
+  spawnedCountInWave: number;
+  killedCountInWave: number;
+}>;
+
+export type HudSpeedOption = Readonly<{
+  speed: GameSpeed;
+  isActive: boolean;
+}>;
+
+export type HudState = Readonly<{
+  crystals: number;
+  maxCrystals: number;
+  gold: number;
+  manaCrystal: number;
+  wave: HudWaveState;
+  status: GameStatus;
+  isPaused: boolean;
+  speed: GameSpeed;
+  speedOptions: readonly HudSpeedOption[];
+  canPause: boolean;
+  canResume: boolean;
+  canStartNextWave: boolean;
+}>;
 
 export type GameSnapshot = Readonly<{
   savedAtTick: number;

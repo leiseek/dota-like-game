@@ -44,10 +44,10 @@ export const level001Config: LevelConfig = {
   startingHeroes: [],
 
   heroConfigs: [
-    { archetype: "hook-guardian", buildCost: 120, maxHealth: 100, attackDamage: 18, attackIntervalMs: 1150, attackRange: 130 },
-    { archetype: "frost-priestess", buildCost: 110, maxHealth: 100, attackDamage: 10, attackIntervalMs: 1000, attackRange: 150 },
-    { archetype: "storm-sigilist", buildCost: 140, maxHealth: 100, attackDamage: 22, attackIntervalMs: 1400, attackRange: 165 },
-    { archetype: "moonblade-ranger", buildCost: 130, maxHealth: 100, attackDamage: 16, attackIntervalMs: 800, attackRange: 155 },
+    { archetype: "hook-guardian", buildCost: 120, maxHealth: 100, attackDamage: 18, attackIntervalMs: 1150, attackRange: 130, skillManaCost: 35, skillCooldownMs: 16000, skillDamage: 80 },
+    { archetype: "frost-priestess", buildCost: 110, maxHealth: 100, attackDamage: 10, attackIntervalMs: 1000, attackRange: 150, skillManaCost: 40, skillCooldownMs: 18000, skillDamage: 45 },
+    { archetype: "storm-sigilist", buildCost: 140, maxHealth: 100, attackDamage: 22, attackIntervalMs: 1400, attackRange: 165, skillManaCost: 45, skillCooldownMs: 20000, skillDamage: 95 },
+    { archetype: "moonblade-ranger", buildCost: 130, maxHealth: 100, attackDamage: 16, attackIntervalMs: 800, attackRange: 155, skillManaCost: 50, skillCooldownMs: 22000, skillDamage: 60 },
   ],
   towerSlots: [
     { id: "T01", position: { x: 150, y: 190 }, initiallyUnlocked: true },

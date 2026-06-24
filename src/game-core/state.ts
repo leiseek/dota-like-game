@@ -17,6 +17,7 @@ export function createInitialGameState(level: LevelConfig): GameState {
     randomSeed,
     randomState: randomSeed,
     baseHealth: level.baseHealth,
+    maxBaseHealth: level.baseHealth,
     resources: {
       gold: level.startingGold,
       manaCrystal: level.startingManaCrystal,
@@ -76,5 +77,11 @@ export function createSnapshot(state: GameState): GameSnapshot {
 }
 
 export function restoreSnapshot(snapshot: GameSnapshot): GameState {
-  return structuredClone(snapshot.state);
+  const restored = structuredClone(snapshot.state);
+  return {
+    ...restored,
+    status: restored.status === "won" || restored.status === "lost" ? restored.status : "paused",
+    clock: { ...restored.clock, paused: restored.status !== "won" && restored.status !== "lost" },
+    pendingActions: [],
+  };
 }

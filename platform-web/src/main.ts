@@ -215,11 +215,11 @@ function abandonSavedBattle(): void {
 
 function syncUi(): void {
   const hud = selectHudState(gameState);
-  setText("hud-crystals", `Crystals ${hud.crystals}/${hud.maxCrystals}`);
+  setText("hud-crystals", `Crystals ${hud.crystals}/${hud.maxCrystals} · ${crystalStatusLabel(hud.crystal.status)}`);
   setText("hud-gold", `Gold ${hud.gold}`);
   setText("hud-mana", `Mana ${hud.manaCrystal}`);
   setText("hud-wave", `Wave ${hud.wave.currentWave}/${hud.wave.totalWaves}`);
-  setText("hud-status", `Status ${hud.status}`);
+  setText("hud-status", hud.settlement.isComplete ? settlementLabel(hud.settlement) : `Status ${hud.status}`);
 
   startButton.disabled = gameState.status !== "ready";
   pauseButton.textContent = hud.canResume ? "Resume" : "Pause";
@@ -228,6 +228,23 @@ function syncUi(): void {
   waveButton.disabled = !hud.canStartNextWave;
   resumeButton.disabled = !localStorage.getItem(SNAPSHOT_KEY);
   abandonButton.disabled = !localStorage.getItem(SNAPSHOT_KEY);
+}
+
+function crystalStatusLabel(status: GameState["crystal"]["status"]): string {
+  switch (status) {
+    case "safe":
+      return "safe";
+    case "carried":
+      return "stolen";
+    case "recovered":
+      return "recovered";
+    case "escaped":
+      return "escaped";
+  }
+}
+
+function settlementLabel(settlement: GameState["settlement"]): string {
+  return `${settlement.outcome.toUpperCase()} · ${settlement.stars}★ · ${settlement.remainingCrystals}/${settlement.maxCrystals} crystals`;
 }
 
 function setText(id: string, text: string): void {
@@ -246,6 +263,7 @@ function render(): void {
   drawHeroes();
   drawEnemies();
   drawOverlayText();
+  drawSettlementPanel();
 }
 
 function clearCanvas(): void {
@@ -353,6 +371,12 @@ function drawEnemies(): void {
     context.stroke();
     drawHealthBar(enemy.position.x - 18, enemy.position.y - 24, 36, enemy.health / enemy.maxHealth);
 
+    if (enemy.statusEffects?.some((statusEffect) => statusEffect.type === "stun")) {
+      drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 }, "STUN", "#ffe28a");
+    } else if (enemy.statusEffects?.some((statusEffect) => statusEffect.type === "slow")) {
+      drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 }, "SLOW", "#bff8ff");
+    }
+
     if (enemy.carryingCrystal) {
       context.fillStyle = "#ffe28a";
       context.beginPath();
@@ -369,11 +393,32 @@ function drawEnemies(): void {
 function drawOverlayText(): void {
   context.save();
   context.fillStyle = "rgba(0, 0, 0, 0.34)";
-  context.fillRect(16, 456, 480, 68);
+  context.fillRect(16, 456, 520, 68);
   context.fillStyle = "rgba(255,255,255,0.86)";
   context.font = "16px system-ui, sans-serif";
   context.fillText("Click slot: build · Click hero: select · Click enemy: cast skill", 32, 486);
-  context.fillText(`Selected hero: ${selectedHeroId ?? "none"}`, 32, 512);
+  context.fillText(`Selected hero: ${selectedHeroId ?? "none"} · Crystal ${gameState.crystal.status}`, 32, 512);
+  context.restore();
+}
+
+function drawSettlementPanel(): void {
+  if (!gameState.settlement.isComplete) return;
+
+  context.save();
+  context.fillStyle = "rgba(0, 0, 0, 0.72)";
+  context.fillRect(250, 150, 460, 210);
+  context.strokeStyle = "rgba(255, 214, 138, 0.72)";
+  context.lineWidth = 2;
+  context.strokeRect(250, 150, 460, 210);
+  context.fillStyle = "#f6f0df";
+  context.textAlign = "center";
+  context.font = "28px system-ui, sans-serif";
+  context.fillText(gameState.settlement.outcome === "victory" ? "Victory" : "Defeat", 480, 205);
+  context.font = "22px system-ui, sans-serif";
+  context.fillText(`${gameState.settlement.stars} ★`, 480, 245);
+  context.font = "16px system-ui, sans-serif";
+  context.fillText(`Reason: ${gameState.settlement.reason}`, 480, 280);
+  context.fillText(`Crystals: ${gameState.settlement.remainingCrystals}/${gameState.settlement.maxCrystals}`, 480, 310);
   context.restore();
 }
 

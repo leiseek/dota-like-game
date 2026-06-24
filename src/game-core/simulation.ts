@@ -1,9 +1,34 @@
-import type { Enemy, GameAction, GameState, Hero, LevelConfig, WaveRuntimeState } from "./types.js";
+import type {
+  CrystalState,
+  Enemy,
+  GameAction,
+  GameState,
+  Hero,
+  HeroConfig,
+  LevelConfig,
+  SettlementReason,
+  SettlementState,
+  StarRating,
+  StatusEffectState,
+  Vector2,
+  WaveRuntimeState,
+} from "./types.js";
 
 const DEFAULT_HERO_SKILL_DAMAGE = 25;
 const DEFAULT_HERO_SKILL_COOLDOWN_TICKS = 10;
 const DEFAULT_HERO_SKILL_MANA_COST = 0;
 const DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND = 75;
+const DEFAULT_HOOK_PULL_DISTANCE = 160;
+const DEFAULT_FROST_RADIUS = 90;
+const DEFAULT_FROST_SLOW_MS = 4_000;
+const DEFAULT_FROST_SLOW_MULTIPLIER = 0.35;
+const DEFAULT_STORM_JUMP_COUNT = 4;
+const DEFAULT_STORM_JUMP_RADIUS = 120;
+const DEFAULT_STORM_JUMP_DECAY = 0.85;
+const DEFAULT_STORM_BONUS_JUMPS_VS_STATUS = 2;
+const DEFAULT_MOONBLADE_BOUNCE_COUNT = 2;
+const DEFAULT_MOONBLADE_BOUNCE_DECAY = 0.75;
+const DEFAULT_MOONBLADE_BONUS_DAMAGE_VS_STATUS = 1.2;
 
 function applyAction(state: GameState, action: GameAction, level?: LevelConfig): GameState {
   switch (action.type) {
@@ -33,7 +58,6 @@ function applyAction(state: GameState, action: GameAction, level?: LevelConfig):
       return castSkill(state, action.heroId, action.targetEnemyId, level);
   }
 }
-
 
 function buildHero(state: GameState, slotId: string, heroArchetype: string, level?: LevelConfig): GameState {
   const slot = state.towerSlots.find((candidate) => candidate.id === slotId);
@@ -70,7 +94,7 @@ function buildHero(state: GameState, slotId: string, heroArchetype: string, leve
 
 function getSkillCooldownTicks(level: LevelConfig | undefined, hero: Hero, fixedDeltaMs: number): number {
   const config = getHeroConfig(level, hero);
-  if (!config?.skillCooldownMs) return DEFAULT_HERO_SKILL_COOLDOWN_TICKS;
+  if (config?.skillCooldownMs === undefined) return DEFAULT_HERO_SKILL_COOLDOWN_TICKS;
   return Math.max(1, Math.ceil(config.skillCooldownMs / fixedDeltaMs));
 }
 
@@ -82,6 +106,17 @@ function getSkillDamage(level: LevelConfig | undefined, hero: Hero): number {
   return getHeroConfig(level, hero)?.skillDamage ?? DEFAULT_HERO_SKILL_DAMAGE;
 }
 
+type PendingEnemyMutation = {
+  damage: number;
+  pullDistance: number;
+  statusEffects: StatusEffectState[];
+};
+
+type SkillApplicationResult = Readonly<{
+  enemies: readonly Enemy[];
+  killedEnemies: readonly Enemy[];
+}>;
+
 function castSkill(state: GameState, heroId: string, targetEnemyId: string, level?: LevelConfig): GameState {
   const hero = state.heroes.find((candidate) => candidate.id === heroId);
   const target = state.enemies.find((candidate) => candidate.id === targetEnemyId);
@@ -90,19 +125,13 @@ function castSkill(state: GameState, heroId: string, targetEnemyId: string, leve
   const manaCost = getSkillManaCost(level, hero);
   if (state.resources.manaCrystal < manaCost) return state;
 
-  const skillDamage = getSkillDamage(level, hero);
-  const damagedEnemies = state.enemies.map((enemy) =>
-    enemy.id === targetEnemyId ? { ...enemy, health: enemy.health - skillDamage } : enemy,
-  );
-  const killedEnemies = damagedEnemies.filter((enemy) => enemy.health <= 0);
-  const enemies = damagedEnemies.filter((enemy) => enemy.health > 0);
-  const killedTarget = killedEnemies.some((enemy) => enemy.id === targetEnemyId);
-  const killedCarrier = killedEnemies.some((enemy) => enemy.id === targetEnemyId && enemy.carryingCrystal);
-  const rewardGold = killedEnemies.reduce((sum, enemy) => sum + getEnemyRewardGold(level, enemy), 0);
+  const result = applySkillEffect(state.enemies, hero, target, level);
+  const killedCarrier = result.killedEnemies.find((enemy) => enemy.carryingCrystal);
+  const rewardGold = result.killedEnemies.reduce((sum, enemy) => sum + getEnemyRewardGold(level, enemy), 0);
 
-  return {
+  return syncSettlementState({
     ...state,
-    crystal: killedCarrier ? { atBase: true } : state.crystal,
+    crystal: killedCarrier ? recoverCrystal(state.crystal, killedCarrier.id, state.clock.tick) : state.crystal,
     resources: {
       ...state.resources,
       gold: state.resources.gold + rewardGold,
@@ -113,18 +142,222 @@ function castSkill(state: GameState, heroId: string, targetEnemyId: string, leve
         ? { ...candidate, cooldownTicksRemaining: getSkillCooldownTicks(level, candidate, state.clock.fixedDeltaMs) }
         : candidate,
     ),
-    enemies,
-    wave: killedTarget && state.wave.isWaveActive
-      ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + 1 }
+    enemies: result.enemies,
+    wave: result.killedEnemies.length > 0 && state.wave.isWaveActive
+      ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + result.killedEnemies.length }
       : state.wave,
+  });
+}
+
+function applySkillEffect(enemies: readonly Enemy[], hero: Hero, target: Enemy, level?: LevelConfig): SkillApplicationResult {
+  const config = getHeroConfig(level, hero);
+  switch (config?.skillKind ?? "direct-damage") {
+    case "hook":
+      return applyHookSkill(enemies, hero, target, level, config);
+    case "frost":
+      return applyFrostSkill(enemies, hero, target, level, config);
+    case "storm-chain":
+      return applyStormChainSkill(enemies, hero, target, level, config);
+    case "moonblade":
+      return applyMoonbladeSkill(enemies, hero, target, level, config);
+    case "direct-damage":
+      return applyDirectDamageSkill(enemies, hero, target, level);
+  }
+}
+
+function applyDirectDamageSkill(enemies: readonly Enemy[], hero: Hero, target: Enemy, level?: LevelConfig): SkillApplicationResult {
+  const mutations = new Map<string, PendingEnemyMutation>();
+  addDamage(mutations, target.id, getSkillDamage(level, hero));
+  return applyEnemyMutations(enemies, mutations, level);
+}
+
+function applyHookSkill(
+  enemies: readonly Enemy[],
+  hero: Hero,
+  target: Enemy,
+  level: LevelConfig | undefined,
+  config: HeroConfig,
+): SkillApplicationResult {
+  const mutations = new Map<string, PendingEnemyMutation>();
+  addDamage(mutations, target.id, getSkillDamage(level, hero));
+  addPull(mutations, target.id, config.skillPullDistance ?? DEFAULT_HOOK_PULL_DISTANCE);
+  if (target.carryingCrystal) {
+    addStatusEffect(mutations, target.id, {
+      type: "stun",
+      remainingTicks: msToTicks(config.skillStunMs ?? 1_000, level),
+      speedMultiplier: 0,
+      sourceHeroId: hero.id,
+    });
+  }
+  return applyEnemyMutations(enemies, mutations, level);
+}
+
+function applyFrostSkill(
+  enemies: readonly Enemy[],
+  hero: Hero,
+  target: Enemy,
+  level: LevelConfig | undefined,
+  config: HeroConfig,
+): SkillApplicationResult {
+  const mutations = new Map<string, PendingEnemyMutation>();
+  const radius = config.skillRadius ?? DEFAULT_FROST_RADIUS;
+  const slowTicks = msToTicks(config.skillSlowMs ?? DEFAULT_FROST_SLOW_MS, level);
+
+  for (const enemy of enemies) {
+    if (distance(enemy.position, target.position) > radius) continue;
+    addDamage(mutations, enemy.id, getSkillDamage(level, hero));
+    addStatusEffect(mutations, enemy.id, {
+      type: "slow",
+      remainingTicks: slowTicks,
+      speedMultiplier: enemy.carryingCrystal
+        ? Math.max(0.1, (config.skillSlowMultiplier ?? DEFAULT_FROST_SLOW_MULTIPLIER) - 0.15)
+        : config.skillSlowMultiplier ?? DEFAULT_FROST_SLOW_MULTIPLIER,
+      sourceHeroId: hero.id,
+    });
+  }
+
+  return applyEnemyMutations(enemies, mutations, level);
+}
+
+function applyStormChainSkill(
+  enemies: readonly Enemy[],
+  hero: Hero,
+  target: Enemy,
+  level: LevelConfig | undefined,
+  config: HeroConfig,
+): SkillApplicationResult {
+  const mutations = new Map<string, PendingEnemyMutation>();
+  const baseJumps = config.skillJumpCount ?? DEFAULT_STORM_JUMP_COUNT;
+  const bonusJumps = hasControlStatus(target) ? config.skillBonusJumpsVsStatus ?? DEFAULT_STORM_BONUS_JUMPS_VS_STATUS : 0;
+  const maxHits = 1 + baseJumps + bonusJumps;
+  const chainTargets = selectChainTargets(enemies, target, maxHits, config.skillJumpRadius ?? DEFAULT_STORM_JUMP_RADIUS);
+  const decay = config.skillJumpDecay ?? DEFAULT_STORM_JUMP_DECAY;
+  const baseDamage = getSkillDamage(level, hero);
+
+  chainTargets.forEach((enemy, index) => {
+    addDamage(mutations, enemy.id, Math.round(baseDamage * Math.pow(decay, index)));
+  });
+
+  return applyEnemyMutations(enemies, mutations, level);
+}
+
+function applyMoonbladeSkill(
+  enemies: readonly Enemy[],
+  hero: Hero,
+  target: Enemy,
+  level: LevelConfig | undefined,
+  config: HeroConfig,
+): SkillApplicationResult {
+  const mutations = new Map<string, PendingEnemyMutation>();
+  const maxHits = 1 + (config.skillBounceCount ?? DEFAULT_MOONBLADE_BOUNCE_COUNT);
+  const bounceTargets = selectChainTargets(enemies, target, maxHits, config.skillJumpRadius ?? DEFAULT_STORM_JUMP_RADIUS);
+  const decay = config.skillBounceDecay ?? DEFAULT_MOONBLADE_BOUNCE_DECAY;
+  const baseDamage = getSkillDamage(level, hero);
+  const bonusMultiplier = config.skillBonusDamageVsStatusMultiplier ?? DEFAULT_MOONBLADE_BONUS_DAMAGE_VS_STATUS;
+
+  bounceTargets.forEach((enemy, index) => {
+    const statusBonus = hasControlStatus(enemy) ? bonusMultiplier : 1;
+    addDamage(mutations, enemy.id, Math.round(baseDamage * Math.pow(decay, index) * statusBonus));
+  });
+
+  return applyEnemyMutations(enemies, mutations, level);
+}
+
+function selectChainTargets(enemies: readonly Enemy[], firstTarget: Enemy, maxHits: number, radius: number): readonly Enemy[] {
+  const selected: Enemy[] = [firstTarget];
+  let current = firstTarget;
+
+  while (selected.length < maxHits) {
+    const next = enemies
+      .filter((enemy) => enemy.health > 0 && !selected.some((selectedEnemy) => selectedEnemy.id === enemy.id))
+      .filter((enemy) => distance(enemy.position, current.position) <= radius)
+      .sort((a, b) => distance(a.position, current.position) - distance(b.position, current.position))[0];
+
+    if (!next) break;
+    selected.push(next);
+    current = next;
+  }
+
+  return selected;
+}
+
+function getMutation(mutations: Map<string, PendingEnemyMutation>, enemyId: string): PendingEnemyMutation {
+  const existing = mutations.get(enemyId);
+  if (existing) return existing;
+
+  const created: PendingEnemyMutation = { damage: 0, pullDistance: 0, statusEffects: [] };
+  mutations.set(enemyId, created);
+  return created;
+}
+
+function addDamage(mutations: Map<string, PendingEnemyMutation>, enemyId: string, damage: number): void {
+  getMutation(mutations, enemyId).damage += damage;
+}
+
+function addPull(mutations: Map<string, PendingEnemyMutation>, enemyId: string, pullDistance: number): void {
+  getMutation(mutations, enemyId).pullDistance += pullDistance;
+}
+
+function addStatusEffect(mutations: Map<string, PendingEnemyMutation>, enemyId: string, statusEffect: StatusEffectState): void {
+  getMutation(mutations, enemyId).statusEffects.push(statusEffect);
+}
+
+function applyEnemyMutations(
+  enemies: readonly Enemy[],
+  mutations: Map<string, PendingEnemyMutation>,
+  level?: LevelConfig,
+): SkillApplicationResult {
+  const mutatedEnemies = enemies.map((enemy) => {
+    const mutation = mutations.get(enemy.id);
+    if (!mutation) return enemy;
+
+    let nextEnemy: Enemy = mutation.damage > 0 ? { ...enemy, health: enemy.health - mutation.damage } : enemy;
+    if (nextEnemy.health > 0 && mutation.statusEffects.length > 0) {
+      nextEnemy = withAddedStatusEffects(nextEnemy, mutation.statusEffects);
+    }
+    if (nextEnemy.health > 0 && mutation.pullDistance > 0 && level) {
+      nextEnemy = moveEnemyAlongPath(nextEnemy, level, mutation.pullDistance, -1);
+    }
+    return nextEnemy;
+  });
+
+  return {
+    enemies: mutatedEnemies.filter((enemy) => enemy.health > 0),
+    killedEnemies: mutatedEnemies.filter((enemy) => enemy.health <= 0),
   };
 }
 
-function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
+function withAddedStatusEffects(enemy: Enemy, statusEffects: readonly StatusEffectState[]): Enemy {
+  return {
+    ...enemy,
+    statusEffects: [...(enemy.statusEffects ?? []), ...statusEffects].filter((statusEffect) => statusEffect.remainingTicks > 0),
+  };
+}
+
+function decayStatusEffects(enemy: Enemy): Enemy {
+  if (!enemy.statusEffects?.length) return enemy;
+
+  const statusEffects = enemy.statusEffects
+    .map((statusEffect) => ({ ...statusEffect, remainingTicks: statusEffect.remainingTicks - 1 }))
+    .filter((statusEffect) => statusEffect.remainingTicks > 0);
+
+  if (statusEffects.length === 0) {
+    const { statusEffects: _statusEffects, ...enemyWithoutStatusEffects } = enemy;
+    return enemyWithoutStatusEffects;
+  }
+
+  return { ...enemy, statusEffects };
+}
+
+function msToTicks(durationMs: number, level?: LevelConfig): number {
+  return Math.max(1, Math.ceil(durationMs / (level?.fixedDeltaMs ?? 100)));
+}
+
+function distance(a: Vector2, b: Vector2): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
-function interpolate(a: { x: number; y: number }, b: { x: number; y: number }, progress: number): { x: number; y: number } {
+function interpolate(a: Vector2, b: Vector2, progress: number): Vector2 {
   return {
     x: a.x + (b.x - a.x) * progress,
     y: a.y + (b.y - a.y) * progress,
@@ -132,26 +365,53 @@ function interpolate(a: { x: number; y: number }, b: { x: number; y: number }, p
 }
 
 function getEnemySpeed(level: LevelConfig | undefined, enemy: Enemy): number {
-  return (
+  const baseSpeed =
     level?.enemies?.find((candidate) => candidate.archetype === enemy.archetype)?.speedUnitsPerSecond ??
-    DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND
+    DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND;
+  return baseSpeed * getStatusSpeedMultiplier(enemy);
+}
+
+function getStatusSpeedMultiplier(enemy: Enemy): number {
+  const activeStatusEffects = enemy.statusEffects?.filter((statusEffect) => statusEffect.remainingTicks > 0) ?? [];
+  if (activeStatusEffects.some((statusEffect) => statusEffect.type === "stun")) return 0;
+
+  const slowMultipliers = activeStatusEffects
+    .filter((statusEffect) => statusEffect.type === "slow")
+    .map((statusEffect) => statusEffect.speedMultiplier ?? 1);
+
+  return slowMultipliers.length > 0 ? Math.min(...slowMultipliers) : 1;
+}
+
+function hasControlStatus(enemy: Enemy): boolean {
+  return Boolean(
+    enemy.statusEffects?.some(
+      (statusEffect) =>
+        statusEffect.remainingTicks > 0 && (statusEffect.type === "slow" || statusEffect.type === "stun"),
+    ),
   );
 }
 
 function advanceEnemyAlongPath(enemy: Enemy, level?: LevelConfig): Enemy {
-  const path = level?.path;
-  if (!path || path.length < 2) {
+  const direction = enemy.carryingCrystal ? -1 : 1;
+  if (!level || level.path.length < 2) {
     return {
       ...enemy,
-      progress: Math.max(0, Math.min(1, enemy.progress + (enemy.carryingCrystal ? -0.05 : 0.05))),
+      progress: Math.max(0, Math.min(1, enemy.progress + direction * 0.05 * getStatusSpeedMultiplier(enemy))),
     };
   }
+
+  const remainingDistance = getEnemySpeed(level, enemy) * (level.fixedDeltaMs / 1000);
+  return moveEnemyAlongPath(enemy, level, remainingDistance, direction);
+}
+
+function moveEnemyAlongPath(enemy: Enemy, level: LevelConfig, distanceToMove: number, direction: 1 | -1): Enemy {
+  const path = level.path;
+  if (path.length < 2 || distanceToMove <= 0) return enemy;
 
   const lastSegmentIndex = path.length - 2;
   let pathIndex = Math.max(0, Math.min(enemy.pathIndex, lastSegmentIndex));
   let progress = Math.max(0, Math.min(enemy.progress, 1));
-  let remainingDistance = getEnemySpeed(level, enemy) * (level.fixedDeltaMs / 1000);
-  const direction = enemy.carryingCrystal ? -1 : 1;
+  let remainingDistance = distanceToMove;
 
   while (remainingDistance > 0) {
     const segmentStart = path[pathIndex];
@@ -197,8 +457,7 @@ function advanceEnemyAlongPath(enemy: Enemy, level?: LevelConfig): Enemy {
   return { ...enemy, pathIndex, progress, position };
 }
 
-
-function getHeroConfig(level: LevelConfig | undefined, hero: Hero) {
+function getHeroConfig(level: LevelConfig | undefined, hero: Hero): HeroConfig | undefined {
   return level?.heroConfigs?.find((candidate) => candidate.archetype === hero.archetype);
 }
 
@@ -223,7 +482,7 @@ function applyTowerCombat(state: GameState, level?: LevelConfig): GameState {
   let enemies = [...state.enemies];
   let rewardGold = 0;
   let killedCount = 0;
-  let recoveredCrystal = false;
+  let recoveredCrystalEnemyId: string | undefined;
 
   const heroes = state.heroes.map((hero) => {
     const config = getHeroConfig(level, hero);
@@ -253,13 +512,13 @@ function applyTowerCombat(state: GameState, level?: LevelConfig): GameState {
     if (killedEnemy) {
       rewardGold += getEnemyRewardGold(level, killedEnemy);
       killedCount += 1;
-      recoveredCrystal = recoveredCrystal || killedEnemy.carryingCrystal;
+      if (killedEnemy.carryingCrystal) recoveredCrystalEnemyId = killedEnemy.id;
     }
 
     return { ...cooledHero, attackCooldownMs: config.attackIntervalMs, targetEnemyId: target.id };
   });
 
-  return {
+  return syncSettlementState({
     ...state,
     heroes,
     enemies,
@@ -267,10 +526,48 @@ function applyTowerCombat(state: GameState, level?: LevelConfig): GameState {
       ...state.resources,
       gold: state.resources.gold + rewardGold,
     },
-    crystal: recoveredCrystal ? { atBase: true } : state.crystal,
+    crystal: recoveredCrystalEnemyId ? recoverCrystal(state.crystal, recoveredCrystalEnemyId, state.clock.tick) : state.crystal,
     wave: killedCount > 0 && state.wave.isWaveActive
       ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + killedCount }
       : state.wave,
+  });
+}
+
+function stealCrystal(crystal: CrystalState, enemyId: string, tick: number): CrystalState {
+  return {
+    ...crystal,
+    atBase: false,
+    status: "carried",
+    carrierEnemyId: enemyId,
+    lastCarrierEnemyId: enemyId,
+    lastEvent: { type: "stolen", tick, enemyId },
+    stolenCount: crystal.stolenCount + 1,
+  };
+}
+
+function recoverCrystal(crystal: CrystalState, enemyId: string, tick: number): CrystalState {
+  const { carrierEnemyId: _carrierEnemyId, ...withoutCarrier } = crystal;
+  return {
+    ...withoutCarrier,
+    atBase: true,
+    status: "recovered",
+    lastCarrierEnemyId: enemyId,
+    lastDroppedEnemyId: enemyId,
+    lastEvent: { type: "recovered", tick, enemyId },
+    droppedCount: crystal.droppedCount + 1,
+    recoveredCount: crystal.recoveredCount + 1,
+  };
+}
+
+function escapeCrystal(crystal: CrystalState, enemyId: string, tick: number): CrystalState {
+  return {
+    ...crystal,
+    atBase: false,
+    status: "escaped",
+    carrierEnemyId: enemyId,
+    lastCarrierEnemyId: enemyId,
+    lastEvent: { type: "escaped", tick, enemyId },
+    escapedCount: crystal.escapedCount + 1,
   };
 }
 
@@ -283,7 +580,7 @@ function resolveCrystalAndBase(state: GameState, advancedEnemies: readonly Enemy
   for (const enemy of advancedEnemies) {
     if (enemy.carryingCrystal && enemy.pathIndex === 0 && enemy.progress <= 0) {
       status = "lost";
-      crystal = { atBase: false, carrierEnemyId: enemy.id };
+      crystal = escapeCrystal(crystal, enemy.id, state.clock.tick);
       enemies.push({ ...enemy, progress: 0 });
       continue;
     }
@@ -293,7 +590,7 @@ function resolveCrystalAndBase(state: GameState, advancedEnemies: readonly Enemy
     if (!enemy.carryingCrystal && enemy.progress >= 1 && enemy.pathIndex === lastPathSegmentIndex) {
       if (crystal.atBase) {
         const carrier = { ...enemy, progress: 1, carryingCrystal: true };
-        crystal = { atBase: false, carrierEnemyId: carrier.id };
+        crystal = stealCrystal(crystal, carrier.id, state.clock.tick);
         enemies.push(carrier);
       } else {
         baseHealth = Math.max(0, baseHealth - 1);
@@ -414,7 +711,7 @@ function advanceRunningTick(state: GameState, level?: LevelConfig): GameState {
   const waveAdvanced = advanceWave(preparedState, level);
   const movedState = {
     ...preparedState,
-    enemies: waveAdvanced.enemies.map((enemy) => advanceEnemyAlongPath(enemy, level)),
+    enemies: waveAdvanced.enemies.map((enemy) => decayStatusEffects(advanceEnemyAlongPath(enemy, level))),
     wave: waveAdvanced.wave,
   };
   const combatState = applyTowerCombat(movedState, level);
@@ -426,10 +723,11 @@ function advanceRunningTick(state: GameState, level?: LevelConfig): GameState {
     !waveAdvanced.wave.isWaitingNextWave &&
     resolved.enemies.length === 0;
 
-  return {
+  const nextStatus = completedAllWaves && resolved.status === "running" ? "won" : resolved.status;
+  const nextState: GameState = {
     ...preparedState,
     ...resolved,
-    status: completedAllWaves && resolved.status === "running" ? "won" : resolved.status,
+    status: nextStatus,
     resources: combatState.resources,
     wave: combatState.wave,
     clock: { ...state.clock, tick: state.clock.tick + 1 },
@@ -437,12 +735,54 @@ function advanceRunningTick(state: GameState, level?: LevelConfig): GameState {
       ...hero,
       cooldownTicksRemaining: Math.max(0, hero.cooldownTicksRemaining - 1),
     })),
+    settlement: combatState.settlement,
   };
+
+  return syncSettlementState(nextState);
+}
+
+function calculateStars(remainingCrystals: number, maxCrystals: number): StarRating {
+  if (maxCrystals <= 0 || remainingCrystals <= 0) return 0;
+  if (remainingCrystals === maxCrystals) return 3;
+  if (remainingCrystals / maxCrystals >= 0.5) return 2;
+  return 1;
+}
+
+function getSettlementReason(state: GameState): SettlementReason {
+  if (state.status === "won") return "all-waves-cleared";
+  if (state.crystal.status === "escaped") return "crystal-escaped";
+  if (state.baseHealth <= 0) return "base-crystals-depleted";
+  return "none";
+}
+
+function createSettlementState(state: GameState): SettlementState {
+  const isVictory = state.status === "won";
+  const isDefeat = state.status === "lost";
+  const isComplete = isVictory || isDefeat;
+  const stars = isVictory ? calculateStars(state.baseHealth, state.maxBaseHealth) : 0;
+
+  return {
+    outcome: isVictory ? "victory" : isDefeat ? "defeat" : "pending",
+    reason: getSettlementReason(state),
+    isComplete,
+    stars,
+    remainingCrystals: state.baseHealth,
+    maxCrystals: state.maxBaseHealth,
+    recoveredCrystals: state.crystal.recoveredCount,
+    stolenCrystals: state.crystal.stolenCount,
+    escapedCrystals: state.crystal.escapedCount,
+    ...(isComplete ? { completedAtTick: state.clock.tick } : {}),
+  };
+}
+
+function syncSettlementState(state: GameState): GameState {
+  if (state.settlement.isComplete) return state;
+  return { ...state, settlement: createSettlementState(state) };
 }
 
 export function reduceActions(state: GameState, level?: LevelConfig): GameState {
   const reduced = state.pendingActions.reduce((nextState, action) => applyAction(nextState, action, level), state);
-  return { ...reduced, pendingActions: [] };
+  return syncSettlementState({ ...reduced, pendingActions: [] });
 }
 
 export function stepFixedTick(state: GameState, level?: LevelConfig): GameState {

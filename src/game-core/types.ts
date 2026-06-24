@@ -9,6 +9,17 @@ export type GameSpeed = 1 | 2 | 5 | 10;
 
 export type GameStatus = "ready" | "running" | "paused" | "won" | "lost";
 
+export type StatusEffectType = "slow" | "stun";
+
+export type StatusEffectState = Readonly<{
+  type: StatusEffectType;
+  remainingTicks: number;
+  speedMultiplier?: number;
+  sourceHeroId?: EntityId;
+}>;
+
+export type SkillKind = "direct-damage" | "hook" | "frost" | "storm-chain" | "moonblade";
+
 export type Hero = Readonly<{
   id: EntityId;
   archetype: string;
@@ -31,11 +42,49 @@ export type Enemy = Readonly<{
   health: number;
   maxHealth: number;
   carryingCrystal: boolean;
+  statusEffects?: readonly StatusEffectState[];
+}>;
+
+export type CrystalEventType = "stolen" | "dropped" | "recovered" | "escaped";
+
+export type CrystalRuntimeStatus = "safe" | "carried" | "recovered" | "escaped";
+
+export type CrystalEvent = Readonly<{
+  type: CrystalEventType;
+  tick: number;
+  enemyId?: EntityId;
 }>;
 
 export type CrystalState = Readonly<{
   atBase: boolean;
+  status: CrystalRuntimeStatus;
   carrierEnemyId?: EntityId;
+  lastCarrierEnemyId?: EntityId;
+  lastDroppedEnemyId?: EntityId;
+  lastEvent?: CrystalEvent;
+  stolenCount: number;
+  droppedCount: number;
+  recoveredCount: number;
+  escapedCount: number;
+}>;
+
+export type SettlementOutcome = "pending" | "victory" | "defeat";
+
+export type SettlementReason = "none" | "all-waves-cleared" | "crystal-escaped" | "base-crystals-depleted";
+
+export type StarRating = 0 | 1 | 2 | 3;
+
+export type SettlementState = Readonly<{
+  outcome: SettlementOutcome;
+  reason: SettlementReason;
+  isComplete: boolean;
+  stars: StarRating;
+  remainingCrystals: number;
+  maxCrystals: number;
+  recoveredCrystals: number;
+  stolenCrystals: number;
+  escapedCrystals: number;
+  completedAtTick?: number;
 }>;
 
 export type GameClock = Readonly<{
@@ -64,9 +113,22 @@ export type HeroConfig = Readonly<{
   attackDamage: number;
   attackIntervalMs: number;
   attackRange: number;
+  skillKind?: SkillKind;
   skillManaCost?: number;
   skillCooldownMs?: number;
   skillDamage?: number;
+  skillPullDistance?: number;
+  skillStunMs?: number;
+  skillSlowMs?: number;
+  skillSlowMultiplier?: number;
+  skillRadius?: number;
+  skillJumpCount?: number;
+  skillJumpRadius?: number;
+  skillJumpDecay?: number;
+  skillBonusJumpsVsStatus?: number;
+  skillBounceCount?: number;
+  skillBounceDecay?: number;
+  skillBonusDamageVsStatusMultiplier?: number;
 }>;
 
 export type ResourceState = Readonly<{
@@ -137,6 +199,7 @@ export type GameState = Readonly<{
   maxBaseHealth: number;
   resources: ResourceState;
   crystal: CrystalState;
+  settlement: SettlementState;
   heroes: readonly Hero[];
   enemies: readonly Enemy[];
   pendingActions: readonly GameAction[];
@@ -181,6 +244,18 @@ export type HudWaveState = Readonly<{
   killedCountInWave: number;
 }>;
 
+export type HudCrystalState = Readonly<{
+  status: CrystalRuntimeStatus;
+  carrierEnemyId?: EntityId;
+  lastCarrierEnemyId?: EntityId;
+  lastDroppedEnemyId?: EntityId;
+  lastEventType?: CrystalEventType;
+  stolenCount: number;
+  droppedCount: number;
+  recoveredCount: number;
+  escapedCount: number;
+}>;
+
 export type HudSpeedOption = Readonly<{
   speed: GameSpeed;
   isActive: boolean;
@@ -189,6 +264,8 @@ export type HudSpeedOption = Readonly<{
 export type HudState = Readonly<{
   crystals: number;
   maxCrystals: number;
+  crystal: HudCrystalState;
+  settlement: SettlementState;
   gold: number;
   manaCrystal: number;
   wave: HudWaveState;

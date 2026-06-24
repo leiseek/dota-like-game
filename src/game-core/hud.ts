@@ -1,4 +1,4 @@
-import type { GameSpeed, GameState, HudState } from "./types.js";
+import type { GameSpeed, GameState, HudCrystalState, HudState } from "./types.js";
 
 export const HUD_SPEED_OPTIONS: readonly GameSpeed[] = [1, 2, 5, 10];
 
@@ -11,6 +11,8 @@ export function selectHudState(state: GameState): HudState {
   return {
     crystals: state.baseHealth,
     maxCrystals: state.maxBaseHealth,
+    crystal: selectHudCrystalState(state),
+    settlement: state.settlement,
     gold: state.resources.gold,
     manaCrystal: state.resources.manaCrystal,
     wave: {
@@ -28,5 +30,23 @@ export function selectHudState(state: GameState): HudState {
     canPause: state.status === "running" && !state.clock.paused,
     canResume: state.status === "paused" && state.clock.paused,
     canStartNextWave: state.status === "running" && state.wave.isWaitingNextWave && !state.wave.isWaveActive,
+  };
+}
+
+function selectHudCrystalState(state: GameState): HudCrystalState {
+  const baseCrystal = {
+    status: state.crystal.status,
+    stolenCount: state.crystal.stolenCount,
+    droppedCount: state.crystal.droppedCount,
+    recoveredCount: state.crystal.recoveredCount,
+    escapedCount: state.crystal.escapedCount,
+  };
+
+  return {
+    ...baseCrystal,
+    ...(state.crystal.carrierEnemyId ? { carrierEnemyId: state.crystal.carrierEnemyId } : {}),
+    ...(state.crystal.lastCarrierEnemyId ? { lastCarrierEnemyId: state.crystal.lastCarrierEnemyId } : {}),
+    ...(state.crystal.lastDroppedEnemyId ? { lastDroppedEnemyId: state.crystal.lastDroppedEnemyId } : {}),
+    ...(state.crystal.lastEvent ? { lastEventType: state.crystal.lastEvent.type } : {}),
   };
 }

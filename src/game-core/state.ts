@@ -22,7 +22,14 @@ export function createInitialGameState(level: LevelConfig): GameState {
       gold: level.startingGold,
       manaCrystal: level.startingManaCrystal,
     },
-    crystal: { atBase: true },
+    crystal: {
+      atBase: true,
+      status: "safe",
+      stolenCount: 0,
+      droppedCount: 0,
+      recoveredCount: 0,
+      escapedCount: 0,
+    },
     heroes: level.startingHeroes.map((hero, index) => ({
       ...hero,
       id: `hero-${index + 1}`,

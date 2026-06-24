@@ -25,6 +25,7 @@ export type HeroLevel = 1 | 2 | 3 | 4 | 5;
 export type HeroPassiveKind =
   | "burn"
   | "freeze"
+  | "stun"
   | "slow"
   | "poison"
   | "lightning-chain"

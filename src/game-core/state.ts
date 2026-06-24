@@ -1,5 +1,26 @@
 import { normalizeSeed } from "./random.js";
-import type { GameAction, GameSnapshot, GameState, LevelConfig } from "./types.js";
+import type { GameAction, GameSnapshot, GameState, HeroConfig, HeroLevel, LevelConfig } from "./types.js";
+
+const DEFAULT_LEVEL_THRESHOLDS: readonly [number, number, number, number, number] = [0, 1, 3, 6, 10];
+
+function getHeroConfig(level: LevelConfig, archetype: string): HeroConfig | undefined {
+  return level.heroConfigs?.find((candidate) => candidate.archetype === archetype);
+}
+
+function getHeroLevel(experience: number, config?: HeroConfig): HeroLevel {
+  const thresholds = config?.progression?.levelThresholds ?? DEFAULT_LEVEL_THRESHOLDS;
+  if (experience >= thresholds[4]) return 5;
+  if (experience >= thresholds[3]) return 4;
+  if (experience >= thresholds[2]) return 3;
+  if (experience >= thresholds[1]) return 2;
+  return 1;
+}
+
+function getUnlockedPassiveIds(heroLevel: HeroLevel, config?: HeroConfig): readonly string[] {
+  return config?.progression?.passives
+    .filter((passive) => passive.level <= heroLevel)
+    .map((passive) => passive.id) ?? [];
+}
 
 export function createInitialGameState(level: LevelConfig): GameState {
   const randomSeed = normalizeSeed(level.randomSeed);
@@ -41,13 +62,21 @@ export function createInitialGameState(level: LevelConfig): GameState {
       stolenCrystals: 0,
       escapedCrystals: 0,
     },
-    heroes: level.startingHeroes.map((hero, index) => ({
-      ...hero,
-      id: `hero-${index + 1}`,
-      cooldownTicksRemaining: 0,
-      attackCooldownMs: 0,
-      totalCost: 0,
-    })),
+    heroes: level.startingHeroes.map((hero, index) => {
+      const config = getHeroConfig(level, hero.archetype);
+      const heroLevel = getHeroLevel(0, config);
+      return {
+        ...hero,
+        id: `hero-${index + 1}`,
+        cooldownTicksRemaining: 0,
+        attackCooldownMs: 0,
+        totalCost: 0,
+        level: heroLevel,
+        experience: 0,
+        unlockedPassiveIds: getUnlockedPassiveIds(heroLevel, config),
+        autoCastEnabled: false,
+      };
+    }),
     enemies: [],
     pendingActions: [],
     towerSlots: (level.towerSlots ?? []).map((slot) => ({

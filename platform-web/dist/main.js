@@ -12,6 +12,22 @@ const HERO_OPTIONS = [
     "moonblade-ranger",
 ];
 const SPEED_CYCLE = [1, 2, 5, 10];
+const HERO_DISPLAY_NAMES = {
+    "hook-guardian": "钩锁守卫",
+    "frost-priestess": "冰霜祭司",
+    "storm-sigilist": "风暴符师",
+    "moonblade-ranger": "月刃游侠",
+    guardian: "守卫者",
+};
+const ENEMY_DISPLAY_NAMES = {
+    runner: "试炼行者",
+    "rift-grunt": "裂隙杂兵",
+    "swift-beast": "迅捷兽",
+    "crystal-thief": "水晶窃贼",
+    stoneguard: "石甲卫士",
+    "shield-acolyte": "护盾侍从",
+    "rift-beast-hatchling": "裂隙幼兽",
+};
 const canvas = mustGet("battle-canvas");
 const context = mustGetContext(canvas);
 const heroSelect = mustGet("hero-select");
@@ -20,6 +36,7 @@ const startButton = mustGet("start-button");
 const pauseButton = mustGet("pause-button");
 const speedButton = mustGet("speed-button");
 const waveButton = mustGet("wave-button");
+const autoCastButton = mustGet("auto-cast-button");
 const saveButton = mustGet("save-button");
 const resumeButton = mustGet("resume-button");
 const abandonButton = mustGet("abandon-button");
@@ -40,12 +57,13 @@ speedButton.addEventListener("click", () => {
     dispatch({ type: "SET_SPEED", speed: nextSpeed });
 });
 waveButton.addEventListener("click", () => dispatch({ type: "START_NEXT_WAVE" }));
+autoCastButton.addEventListener("click", toggleSelectedHeroAutoCast);
 saveButton.addEventListener("click", saveAndExit);
 resumeButton.addEventListener("click", continueSavedBattle);
 abandonButton.addEventListener("click", abandonSavedBattle);
 heroSelect.addEventListener("change", () => {
     selectedHeroArchetype = parseHeroArchetype(heroSelect.value);
-    setMessage(`Selected build: ${selectedHeroArchetype}`);
+    setMessage(`已选择建造：${heroName(selectedHeroArchetype)}`);
 });
 canvas.addEventListener("click", handleCanvasClick);
 syncUi();
@@ -128,7 +146,7 @@ function handleCanvasClick(event) {
     const clickedHero = findHeroAt(point);
     if (clickedHero) {
         selectedHeroId = clickedHero.id;
-        setMessage(`Selected hero: ${clickedHero.archetype}. Click an enemy to cast its active skill.`);
+        setMessage(`已选中英雄：${heroName(clickedHero.archetype)}。点击敌人可手动释放大招。`);
         syncUi();
         return;
     }
@@ -136,7 +154,7 @@ function handleCanvasClick(event) {
     if (clickedEnemy) {
         selectedEnemyId = clickedEnemy.id;
         if (!selectedHeroId) {
-            setMessage(`Selected enemy: ${clickedEnemy.archetype}. Select a hero, then click an enemy to cast skill.`);
+            setMessage(`已选中敌人：${enemyName(clickedEnemy.archetype)}。先选择英雄，再点击敌人可释放大招。`);
             syncUi();
             return;
         }
@@ -147,12 +165,12 @@ function handleCanvasClick(event) {
     const clickedSlot = findTowerSlotAt(point);
     if (clickedSlot) {
         if (!clickedSlot.unlocked) {
-            setMessage("This tower slot is locked by an obstacle.");
+            setMessage("该塔位被障碍封锁，后续会加入清障玩法。");
             return;
         }
         if (clickedSlot.occupiedByHeroId) {
             selectedHeroId = clickedSlot.occupiedByHeroId;
-            setMessage(`Selected hero: ${clickedSlot.occupiedByHeroId}. Click an enemy to cast its active skill.`);
+            setMessage(`已选中塔位英雄：${clickedSlot.occupiedByHeroId}。点击敌人可手动释放大招。`);
             syncUi();
             return;
         }
@@ -160,10 +178,10 @@ function handleCanvasClick(event) {
         const builtHero = gameState.heroes.find((hero) => hero.slotId === clickedSlot.id);
         if (builtHero) {
             selectedHeroId = builtHero.id;
-            setMessage(`Built ${builtHero.archetype} at ${clickedSlot.id}. Click an enemy to cast its skill.`);
+            setMessage(`已在 ${clickedSlot.id} 建造 ${heroName(builtHero.archetype)}。点击敌人释放大招，或开启自动大招。`);
         }
         else {
-            setMessage(`Could not build ${selectedHeroArchetype}; check gold and slot state.`);
+            setMessage(`无法建造 ${heroName(selectedHeroArchetype)}，请检查金币或塔位状态。`);
         }
         syncUi();
     }
@@ -171,24 +189,32 @@ function handleCanvasClick(event) {
 function castSelectedHeroSkill(target) {
     const hero = gameState.heroes.find((candidate) => candidate.id === selectedHeroId);
     if (!hero) {
-        setMessage("Select a hero before casting an active skill.");
+        setMessage("请先选择英雄，再释放大招。");
         return;
     }
-    const beforeMana = gameState.resources.manaCrystal;
     const beforeCooldown = hero.cooldownTicksRemaining;
     const beforeTargetHealth = target.health;
     dispatch({ type: "CAST_SKILL", heroId: hero.id, targetEnemyId: target.id });
     const afterHero = gameState.heroes.find((candidate) => candidate.id === hero.id);
     const afterTarget = gameState.enemies.find((enemy) => enemy.id === target.id);
-    const didSpendMana = gameState.resources.manaCrystal < beforeMana;
     const didStartCooldown = (afterHero?.cooldownTicksRemaining ?? 0) > beforeCooldown;
     const didDamageTarget = !afterTarget || afterTarget.health < beforeTargetHealth;
-    if (didSpendMana || didStartCooldown || didDamageTarget) {
-        setMessage(`${hero.archetype} cast ${skillLabel(hero)} on ${target.archetype}.`);
+    if (didStartCooldown || didDamageTarget) {
+        setMessage(`${heroName(hero.archetype)} 对 ${enemyName(target.archetype)} 释放了「${skillLabel(hero)}」。`);
     }
     else {
-        setMessage(`Skill did not cast. Check cooldown, mana, and target validity.`);
+        setMessage("大招未释放：请检查冷却、目标是否存在或是否在有效范围内。");
     }
+}
+function toggleSelectedHeroAutoCast() {
+    const hero = selectedHeroId ? gameState.heroes.find((candidate) => candidate.id === selectedHeroId) : undefined;
+    if (!hero) {
+        setMessage("请先选择一个英雄，再切换自动大招。");
+        return;
+    }
+    const enabled = !hero.autoCastEnabled;
+    dispatch({ type: "SET_AUTO_CAST", heroId: hero.id, enabled });
+    setMessage(`${heroName(hero.archetype)} 自动大招已${enabled ? "开启" : "关闭"}。`);
 }
 function toLogicalPoint(event) {
     const rect = canvas.getBoundingClientRect();
@@ -211,13 +237,13 @@ function saveAndExit() {
         dispatch({ type: "PAUSE" });
     }
     localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(createSnapshot(gameState)));
-    setMessage("Battle snapshot saved locally. Continue it from this browser later.");
+    setMessage("战斗已保存到当前浏览器，可稍后继续。");
     syncUi();
 }
 function continueSavedBattle() {
     const snapshotJson = localStorage.getItem(SNAPSHOT_KEY);
     if (!snapshotJson) {
-        setMessage("No saved battle snapshot found.");
+        setMessage("没有找到本地战斗存档。");
         return;
     }
     try {
@@ -227,53 +253,72 @@ function continueSavedBattle() {
         selectedEnemyId = undefined;
         floatingTexts = [];
         accumulatorMs = 0;
-        setMessage("Saved battle restored into paused state.");
+        setMessage("已恢复存档，战斗处于暂停状态。");
         syncUi();
     }
     catch {
         localStorage.removeItem(SNAPSHOT_KEY);
-        setMessage("Saved battle snapshot was invalid and has been cleared.");
+        setMessage("存档数据无效，已清除。");
         syncUi();
     }
 }
 function abandonSavedBattle() {
     localStorage.removeItem(SNAPSHOT_KEY);
-    setMessage("Saved battle abandoned.");
+    setMessage("已放弃本地存档。");
     syncUi();
 }
 function syncUi() {
     const hud = selectHudState(gameState);
-    setText("hud-crystals", `Crystals ${hud.crystals}/${hud.maxCrystals} · ${crystalStatusLabel(hud.crystal.status)}`);
-    setText("hud-gold", `Gold ${hud.gold}`);
-    setText("hud-mana", `Mana ${hud.manaCrystal}`);
-    setText("hud-wave", `Wave ${hud.wave.currentWave}/${hud.wave.totalWaves}`);
-    setText("hud-status", hud.settlement.isComplete ? settlementLabel(hud.settlement) : `Status ${hud.status}`);
+    setText("hud-crystals", `水晶 ${hud.crystals}/${hud.maxCrystals} · ${crystalStatusLabel(hud.crystal.status)}`);
+    setText("hud-gold", `金币 ${hud.gold}`);
+    setText("hud-mana", `能量 ${hud.manaCrystal}`);
+    setText("hud-wave", `波次 ${hud.wave.currentWave}/${hud.wave.totalWaves}`);
+    setText("hud-status", hud.settlement.isComplete ? settlementLabel(hud.settlement) : `状态 ${gameStatusLabel(hud.status)}`);
+    const selectedHero = selectedHeroId ? gameState.heroes.find((hero) => hero.id === selectedHeroId) : undefined;
     startButton.disabled = gameState.status !== "ready";
-    pauseButton.textContent = hud.canResume ? "Resume" : "Pause";
+    pauseButton.textContent = hud.canResume ? "继续" : "暂停";
     pauseButton.disabled = !hud.canPause && !hud.canResume;
-    speedButton.textContent = `Speed ${hud.speed}x`;
+    speedButton.textContent = `速度 ${hud.speed}x`;
     waveButton.disabled = !hud.canStartNextWave;
+    autoCastButton.disabled = !selectedHero;
+    autoCastButton.textContent = selectedHero
+        ? `自动大招：${selectedHero.autoCastEnabled ? "开" : "关"}`
+        : "自动大招：未选择英雄";
     resumeButton.disabled = !localStorage.getItem(SNAPSHOT_KEY);
     abandonButton.disabled = !localStorage.getItem(SNAPSHOT_KEY);
 }
 function crystalStatusLabel(status) {
     switch (status) {
         case "safe":
-            return "safe";
+            return "安全";
         case "carried":
-            return "stolen";
+            return "被携带";
         case "dropped":
-            return "dropped";
+            return "掉落";
         case "returning":
-            return "returning";
+            return "返回中";
         case "recovered":
-            return "recovered";
+            return "已回收";
         case "escaped":
-            return "escaped";
+            return "已被运出";
+    }
+}
+function gameStatusLabel(status) {
+    switch (status) {
+        case "ready":
+            return "待开始";
+        case "running":
+            return "战斗中";
+        case "paused":
+            return "已暂停";
+        case "won":
+            return "胜利";
+        case "lost":
+            return "失败";
     }
 }
 function settlementLabel(settlement) {
-    return `${settlement.outcome.toUpperCase()} · ${settlement.stars}★ · ${settlement.remainingCrystals}/${settlement.maxCrystals} crystals`;
+    return `${settlement.outcome === "victory" ? "胜利" : "失败"} · ${settlement.stars}★ · 水晶 ${settlement.remainingCrystals}/${settlement.maxCrystals}`;
 }
 function setText(id, text) {
     mustGet(id).textContent = text;
@@ -319,9 +364,9 @@ function drawMap() {
     const start = level001Config.path[0];
     const end = level001Config.path[level001Config.path.length - 1];
     if (start)
-        drawLabel(start, "Start", "#b7ffb2");
+        drawLabel(start, "起点", "#b7ffb2");
     if (end)
-        drawLabel(end, "Ancient", "#ffd68a");
+        drawLabel(end, "圣坛", "#ffd68a");
 }
 function strokePath() {
     context.beginPath();
@@ -363,7 +408,7 @@ function drawObstacles() {
 function drawHeroes() {
     for (const hero of gameState.heroes) {
         const selected = hero.id === selectedHeroId;
-        const heroConfig = level001Config.heroConfigs?.find((config) => config.archetype === hero.archetype);
+        const heroConfig = getHeroConfig(hero.archetype);
         if (selected && heroConfig) {
             context.beginPath();
             context.arc(hero.position.x, hero.position.y, heroConfig.attackRange, 0, Math.PI * 2);
@@ -380,8 +425,9 @@ function drawHeroes() {
         context.lineWidth = selected ? 3 : 1.5;
         context.fill();
         context.stroke();
-        const cooldown = hero.cooldownTicksRemaining > 0 ? ` CD ${hero.cooldownTicksRemaining}` : "";
-        drawLabel({ x: hero.position.x, y: hero.position.y - 25 }, `${shortHeroName(hero.archetype)}${cooldown}`, "#dcecff");
+        const cooldown = hero.cooldownTicksRemaining > 0 ? ` CD${cooldownSeconds(hero)}` : "";
+        const auto = hero.autoCastEnabled ? " 自动" : "";
+        drawLabel({ x: hero.position.x, y: hero.position.y - 25 }, `Lv${hero.level} ${shortHeroName(hero.archetype)}${cooldown}${auto}`, "#dcecff");
     }
 }
 function drawEnemies() {
@@ -396,17 +442,20 @@ function drawEnemies() {
         }
         context.beginPath();
         context.arc(enemy.position.x, enemy.position.y, enemy.carryingCrystal ? 14 : 11, 0, Math.PI * 2);
-        context.fillStyle = enemy.carryingCrystal ? "#ff7a59" : "#ff4f6d";
+        context.fillStyle = enemy.carryingCrystal ? "#ff7a59" : enemy.returningToStart ? "#ff9f43" : "#ff4f6d";
         context.strokeStyle = enemy.carryingCrystal ? "#ffe28a" : "rgba(255,255,255,0.65)";
         context.lineWidth = enemy.carryingCrystal ? 3 : 1.5;
         context.fill();
         context.stroke();
         drawHealthBar(enemy.position.x - 18, enemy.position.y - 24, 36, enemy.health / enemy.maxHealth);
         if (enemy.statusEffects?.some((statusEffect) => statusEffect.type === "stun")) {
-            drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 }, "STUN", "#ffe28a");
+            drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 }, "眩晕", "#ffe28a");
         }
         else if (enemy.statusEffects?.some((statusEffect) => statusEffect.type === "slow")) {
-            drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 }, "SLOW", "#bff8ff");
+            drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 }, "减速", "#bff8ff");
+        }
+        else if (enemy.returningToStart) {
+            drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 }, "返程", "#ffcf5a");
         }
         if (enemy.carryingCrystal) {
             context.fillStyle = "#ffe28a";
@@ -438,7 +487,7 @@ function drawReturningCrystal() {
     context.lineTo(crystal.position.x - 10, crystal.position.y);
     context.closePath();
     context.fill();
-    drawLabel({ x: crystal.position.x, y: crystal.position.y - 24 }, "RETURN", "#ffe28a");
+    drawLabel({ x: crystal.position.x, y: crystal.position.y - 24 }, "水晶返回", "#ffe28a");
     context.restore();
 }
 function drawFloatingTexts() {
@@ -456,11 +505,11 @@ function drawFloatingTexts() {
 function drawOverlayText() {
     context.save();
     context.fillStyle = "rgba(0, 0, 0, 0.34)";
-    context.fillRect(16, 456, 560, 68);
+    context.fillRect(16, 456, 588, 68);
     context.fillStyle = "rgba(255,255,255,0.86)";
     context.font = "16px system-ui, sans-serif";
-    context.fillText("Click slot: build · Click hero: select · Click enemy: inspect / cast selected hero skill", 32, 486);
-    context.fillText(`Selected hero: ${selectedHeroId ?? "none"} · Selected enemy: ${selectedEnemyId ?? "none"} · Crystal ${gameState.crystal.status}`, 32, 512);
+    context.fillText("点击塔位：建造 · 点击英雄：查看成长 · 点击敌人：查看/手动大招", 32, 486);
+    context.fillText(`英雄：${selectedHeroId ?? "未选"} · 敌人：${selectedEnemyId ?? "未选"} · 水晶 ${crystalStatusLabel(gameState.crystal.status)}`, 32, 512);
     context.restore();
 }
 function drawSelectionPanel() {
@@ -468,40 +517,47 @@ function drawSelectionPanel() {
     const selectedEnemy = selectedEnemyId ? gameState.enemies.find((enemy) => enemy.id === selectedEnemyId) : undefined;
     if (!selectedHero && !selectedEnemy)
         return;
-    const panelHeight = selectedHero && selectedEnemy ? 266 : 170;
+    const heroHeight = selectedHero ? 230 : 0;
+    const enemyHeight = selectedEnemy ? 142 : 0;
+    const panelHeight = Math.max(170, heroHeight + enemyHeight + (selectedHero && selectedEnemy ? 18 : 0));
     context.save();
-    context.fillStyle = "rgba(0, 0, 0, 0.58)";
-    context.fillRect(620, 16, 324, panelHeight);
+    context.fillStyle = "rgba(0, 0, 0, 0.62)";
+    context.fillRect(608, 16, 336, panelHeight);
     context.strokeStyle = "rgba(255, 255, 255, 0.24)";
     context.lineWidth = 1.5;
-    context.strokeRect(620, 16, 324, panelHeight);
-    let nextY = 44;
+    context.strokeRect(608, 16, 336, panelHeight);
+    let nextY = 42;
     if (selectedHero) {
-        nextY = drawHeroPanel(selectedHero, 638, nextY);
+        nextY = drawHeroPanel(selectedHero, 626, nextY);
     }
     if (selectedEnemy) {
-        drawEnemyPanel(selectedEnemy, 638, nextY + (selectedHero ? 12 : 0));
+        drawEnemyPanel(selectedEnemy, 626, nextY + (selectedHero ? 12 : 0));
     }
     context.restore();
 }
 function drawHeroPanel(hero, x, y) {
-    const config = level001Config.heroConfigs?.find((candidate) => candidate.archetype === hero.archetype);
-    drawPanelLine(x, y, `Hero: ${hero.archetype}`, "#dcecff", true);
-    drawPanelLine(x, y + 22, `HP ${hero.health}/${hero.maxHealth} · Cost ${hero.totalCost}`, "rgba(255,255,255,0.86)");
-    drawPanelLine(x, y + 44, `Attack ${config?.attackDamage ?? "?"} · Range ${config?.attackRange ?? "?"}`, "rgba(255,255,255,0.86)");
-    drawPanelLine(x, y + 66, `Skill ${skillLabel(hero)} · Mana ${config?.skillManaCost ?? 0}`, "#ffe28a");
-    drawPanelLine(x, y + 88, `Damage ${config?.skillDamage ?? "?"} · CD ${hero.cooldownTicksRemaining}`, "rgba(255,255,255,0.86)");
-    drawPanelLine(x, y + 110, "Operation: click enemy to cast", "#9ad1ff");
-    return y + 132;
+    const config = getHeroConfig(hero.archetype);
+    const passiveLines = unlockedPassiveLabels(hero, config);
+    drawPanelLine(x, y, `英雄：${heroName(hero.archetype)}`, "#dcecff", true);
+    drawPanelLine(x, y + 22, `等级 Lv${hero.level} · ${xpProgressLabel(hero, config)} · 自动大招 ${hero.autoCastEnabled ? "开" : "关"}`, "rgba(255,255,255,0.9)");
+    drawPanelLine(x, y + 44, `生命 ${hero.health}/${hero.maxHealth} · 造价 ${hero.totalCost}`, "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 66, `普攻 ${config?.attackDamage ?? "?"} · 范围 ${config?.attackRange ?? "?"}`, "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 88, `大招：${skillLabel(hero)} · 无蓝耗`, "#ffe28a");
+    drawPanelLine(x, y + 110, `伤害 ${config?.skillDamage ?? "?"} · 冷却 ${cooldownSeconds(hero)}`, "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 132, "已解锁被动：", "#9ad1ff", true);
+    passiveLines.slice(0, 5).forEach((line, index) => {
+        drawPanelLine(x + 10, y + 154 + index * 18, `• ${line}`, "rgba(255,255,255,0.86)");
+    });
+    return y + 250;
 }
 function drawEnemyPanel(enemy, x, y) {
     const config = level001Config.enemies?.find((candidate) => candidate.archetype === enemy.archetype);
-    drawPanelLine(x, y, `Enemy: ${enemy.archetype}`, "#ffd1dc", true);
-    drawPanelLine(x, y + 22, `HP ${enemy.health}/${enemy.maxHealth} · Reward ${config?.rewardGold ?? 0}`, "rgba(255,255,255,0.86)");
-    drawPanelLine(x, y + 44, `Speed ${config?.speedUnitsPerSecond ?? "?"} · Path ${enemyPathLabel(enemy)}`, "rgba(255,255,255,0.86)");
-    drawPanelLine(x, y + 66, `State ${enemy.carryingCrystal ? "carrying crystal" : "advancing"}`, enemy.carryingCrystal ? "#ffe28a" : "rgba(255,255,255,0.86)");
-    drawPanelLine(x, y + 88, `Buffs ${statusEffectsLabel(enemy)}`, "#bff8ff");
-    drawPanelLine(x, y + 110, "Skill: steal crystal, escape to Start", "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y, `敌人：${enemyName(enemy.archetype)}`, "#ffd1dc", true);
+    drawPanelLine(x, y + 22, `生命 ${Math.ceil(enemy.health)}/${enemy.maxHealth} · 击杀奖励 ${config?.rewardGold ?? 0}`, "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 44, `速度 ${config?.speedUnitsPerSecond ?? "?"} · 路径进度 ${enemyPathLabel(enemy)}`, "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 66, `状态：${enemyStateLabel(enemy)}`, enemy.carryingCrystal ? "#ffe28a" : "rgba(255,255,255,0.86)");
+    drawPanelLine(x, y + 88, `Buff：${statusEffectsLabel(enemy)}`, "#bff8ff");
+    drawPanelLine(x, y + 110, "规则：到圣坛后必须原路返回，从起点离场", "rgba(255,255,255,0.86)");
 }
 function drawPanelLine(x, y, text, color, bold = false) {
     context.fillStyle = color;
@@ -509,32 +565,66 @@ function drawPanelLine(x, y, text, color, bold = false) {
     context.textAlign = "left";
     context.fillText(text, x, y);
 }
+function getHeroConfig(archetype) {
+    return level001Config.heroConfigs?.find((candidate) => candidate.archetype === archetype);
+}
 function skillLabel(hero) {
-    const config = level001Config.heroConfigs?.find((candidate) => candidate.archetype === hero.archetype);
+    const config = getHeroConfig(hero.archetype);
     switch (config?.skillKind ?? "direct-damage") {
         case "hook":
-            return "Hook / pull + stun carrier";
+            return "钩锁牵引 / 拉回并控制携晶者";
         case "frost":
-            return "Frost AoE slow";
+            return "冰霜范围减速";
         case "storm-chain":
-            return "Storm chain lightning";
+            return "风暴连锁闪电";
         case "moonblade":
-            return "Moonblade bounce";
+            return "月刃弹射";
         case "direct-damage":
-            return "Direct damage";
+            return "直接伤害";
     }
-    return "Direct damage";
+}
+function heroName(archetype) {
+    return HERO_DISPLAY_NAMES[archetype] ?? archetype;
+}
+function enemyName(archetype) {
+    return ENEMY_DISPLAY_NAMES[archetype] ?? archetype;
+}
+function unlockedPassiveLabels(hero, config) {
+    const passives = config?.progression?.passives.filter((passive) => hero.unlockedPassiveIds.includes(passive.id)) ?? [];
+    if (passives.length === 0)
+        return ["暂无"];
+    return passives.map((passive) => `Lv${passive.level} ${passive.label}`);
+}
+function xpProgressLabel(hero, config) {
+    if (hero.level >= 5)
+        return `经验 ${hero.experience} / 满级`;
+    const thresholds = [...(config?.progression?.levelThresholds ?? [])];
+    const nextThreshold = thresholds[hero.level] ?? "?";
+    return `经验 ${hero.experience}/${nextThreshold}`;
+}
+function cooldownSeconds(hero) {
+    if (hero.cooldownTicksRemaining <= 0)
+        return "就绪";
+    const seconds = Math.ceil((hero.cooldownTicksRemaining * level001Config.fixedDeltaMs) / 1000);
+    return `${seconds}s`;
 }
 function enemyPathLabel(enemy) {
     return `${(enemy.pathIndex + enemy.progress).toFixed(2)}`;
 }
+function enemyStateLabel(enemy) {
+    if (enemy.carryingCrystal)
+        return "携带水晶返程";
+    if (enemy.returningToStart)
+        return "空手返程";
+    return "前往圣坛";
+}
 function statusEffectsLabel(enemy) {
     const effects = enemy.statusEffects?.filter((statusEffect) => statusEffect.remainingTicks > 0) ?? [];
     if (effects.length === 0)
-        return "none";
+        return "无";
     return effects
-        .map((statusEffect) => `${statusEffect.type}:${statusEffect.remainingTicks}`)
-        .join(", ");
+        .map((statusEffect) => `${statusEffect.type === "stun" ? "眩晕" : "减速"}:${statusEffect.remainingTicks}`)
+        .join("，");
 }
 function drawSettlementPanel() {
     if (!gameState.settlement.isComplete)
@@ -548,13 +638,25 @@ function drawSettlementPanel() {
     context.fillStyle = "#f6f0df";
     context.textAlign = "center";
     context.font = "28px system-ui, sans-serif";
-    context.fillText(gameState.settlement.outcome === "victory" ? "Victory" : "Defeat", 480, 205);
+    context.fillText(gameState.settlement.outcome === "victory" ? "胜利" : "失败", 480, 205);
     context.font = "22px system-ui, sans-serif";
     context.fillText(`${gameState.settlement.stars} ★`, 480, 245);
     context.font = "16px system-ui, sans-serif";
-    context.fillText(`Reason: ${gameState.settlement.reason}`, 480, 280);
-    context.fillText(`Crystals: ${gameState.settlement.remainingCrystals}/${gameState.settlement.maxCrystals}`, 480, 310);
+    context.fillText(`原因：${settlementReasonLabel(gameState.settlement.reason)}`, 480, 280);
+    context.fillText(`水晶：${gameState.settlement.remainingCrystals}/${gameState.settlement.maxCrystals}`, 480, 310);
     context.restore();
+}
+function settlementReasonLabel(reason) {
+    switch (reason) {
+        case "none":
+            return "无";
+        case "all-waves-cleared":
+            return "清完全部波次";
+        case "crystal-escaped":
+            return "水晶被运出起点";
+        case "base-crystals-depleted":
+            return "水晶耗尽";
+    }
 }
 function drawHealthBar(x, y, width, ratio) {
     const clampedRatio = Math.max(0, Math.min(1, ratio));

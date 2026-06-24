@@ -219,7 +219,7 @@ function syncUi(): void {
   setText("hud-gold", `Gold ${hud.gold}`);
   setText("hud-mana", `Mana ${hud.manaCrystal}`);
   setText("hud-wave", `Wave ${hud.wave.currentWave}/${hud.wave.totalWaves}`);
-  setText("hud-status", `Status ${hud.status}`);
+  setText("hud-status", hud.settlement.isComplete ? settlementLabel(hud.settlement) : `Status ${hud.status}`);
 
   startButton.disabled = gameState.status !== "ready";
   pauseButton.textContent = hud.canResume ? "Resume" : "Pause";
@@ -243,6 +243,10 @@ function crystalStatusLabel(status: GameState["crystal"]["status"]): string {
   }
 }
 
+function settlementLabel(settlement: GameState["settlement"]): string {
+  return `${settlement.outcome.toUpperCase()} · ${settlement.stars}★ · ${settlement.remainingCrystals}/${settlement.maxCrystals} crystals`;
+}
+
 function setText(id: string, text: string): void {
   mustGet<HTMLElement>(id).textContent = text;
 }
@@ -259,6 +263,7 @@ function render(): void {
   drawHeroes();
   drawEnemies();
   drawOverlayText();
+  drawSettlementPanel();
 }
 
 function clearCanvas(): void {
@@ -393,6 +398,27 @@ function drawOverlayText(): void {
   context.font = "16px system-ui, sans-serif";
   context.fillText("Click slot: build · Click hero: select · Click enemy: cast skill", 32, 486);
   context.fillText(`Selected hero: ${selectedHeroId ?? "none"} · Crystal ${gameState.crystal.status}`, 32, 512);
+  context.restore();
+}
+
+function drawSettlementPanel(): void {
+  if (!gameState.settlement.isComplete) return;
+
+  context.save();
+  context.fillStyle = "rgba(0, 0, 0, 0.72)";
+  context.fillRect(250, 150, 460, 210);
+  context.strokeStyle = "rgba(255, 214, 138, 0.72)";
+  context.lineWidth = 2;
+  context.strokeRect(250, 150, 460, 210);
+  context.fillStyle = "#f6f0df";
+  context.textAlign = "center";
+  context.font = "28px system-ui, sans-serif";
+  context.fillText(gameState.settlement.outcome === "victory" ? "Victory" : "Defeat", 480, 205);
+  context.font = "22px system-ui, sans-serif";
+  context.fillText(`${gameState.settlement.stars} ★`, 480, 245);
+  context.font = "16px system-ui, sans-serif";
+  context.fillText(`Reason: ${gameState.settlement.reason}`, 480, 280);
+  context.fillText(`Crystals: ${gameState.settlement.remainingCrystals}/${gameState.settlement.maxCrystals}`, 480, 310);
   context.restore();
 }
 

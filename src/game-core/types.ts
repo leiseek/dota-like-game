@@ -20,6 +20,35 @@ export type StatusEffectState = Readonly<{
 
 export type SkillKind = "direct-damage" | "hook" | "frost" | "storm-chain" | "moonblade";
 
+export type HeroLevel = 1 | 2 | 3 | 4 | 5;
+
+export type HeroPassiveKind =
+  | "burn"
+  | "freeze"
+  | "slow"
+  | "poison"
+  | "lightning-chain"
+  | "fissure-block"
+  | "anti-carrier"
+  | "crystal-support"
+  | "cleave"
+  | "aura";
+
+export type HeroPassiveConfig = Readonly<{
+  id: string;
+  level: HeroLevel;
+  label: string;
+  description: string;
+  kind: HeroPassiveKind;
+}>;
+
+export type HeroProgressionConfig = Readonly<{
+  xpPerKill: number;
+  levelThresholds: readonly [number, number, number, number, number];
+  cooldownReductionPerLevel: number;
+  passives: readonly HeroPassiveConfig[];
+}>;
+
 export type Hero = Readonly<{
   id: EntityId;
   archetype: string;
@@ -31,6 +60,10 @@ export type Hero = Readonly<{
   targetEnemyId?: EntityId;
   slotId?: string;
   totalCost: number;
+  level: HeroLevel;
+  experience: number;
+  unlockedPassiveIds: readonly string[];
+  autoCastEnabled: boolean;
 }>;
 
 export type Enemy = Readonly<{
@@ -134,6 +167,7 @@ export type HeroConfig = Readonly<{
   skillBounceCount?: number;
   skillBounceDecay?: number;
   skillBonusDamageVsStatusMultiplier?: number;
+  progression?: HeroProgressionConfig;
 }>;
 
 export type ResourceState = Readonly<{
@@ -221,7 +255,10 @@ export type LevelConfig = Readonly<{
   startingGold: number;
   startingManaCrystal: number;
   path: readonly Vector2[];
-  startingHeroes: readonly Omit<Hero, "id" | "cooldownTicksRemaining" | "attackCooldownMs" | "totalCost">[];
+  startingHeroes: readonly Omit<
+    Hero,
+    "id" | "cooldownTicksRemaining" | "attackCooldownMs" | "totalCost" | "level" | "experience" | "unlockedPassiveIds" | "autoCastEnabled"
+  >[];
   heroConfigs?: readonly HeroConfig[];
   enemies?: readonly EnemyConfig[];
   towerSlots?: readonly TowerSlotConfig[];
@@ -238,6 +275,7 @@ export type GameAction =
   | Readonly<{ type: "BUILD_HERO"; slotId: EntityId; heroArchetype: string }>
   | Readonly<{ type: "PLACE_HERO"; hero: Hero }>
   | Readonly<{ type: "CAST_SKILL"; heroId: EntityId; targetEnemyId: EntityId }>
+  | Readonly<{ type: "SET_AUTO_CAST"; heroId: EntityId; enabled: boolean }>
   | Readonly<{ type: "SPAWN_ENEMY"; enemy: Enemy }>;
 
 export type HudWaveState = Readonly<{

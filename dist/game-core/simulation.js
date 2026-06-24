@@ -18,17 +18,11 @@ const DEFAULT_MOONBLADE_BONUS_DAMAGE_VS_STATUS = 1.2;
 function applyAction(state, action, level) {
     switch (action.type) {
         case "START":
-            return state.status === "ready"
-                ? { ...state, status: "running", clock: { ...state.clock, paused: false } }
-                : state;
+            return state.status === "ready" ? { ...state, status: "running", clock: { ...state.clock, paused: false } } : state;
         case "PAUSE":
-            return state.status === "running"
-                ? { ...state, status: "paused", clock: { ...state.clock, paused: true } }
-                : state;
+            return state.status === "running" ? { ...state, status: "paused", clock: { ...state.clock, paused: true } } : state;
         case "RESUME":
-            return state.status === "paused"
-                ? { ...state, status: "running", clock: { ...state.clock, paused: false } }
-                : state;
+            return state.status === "paused" ? { ...state, status: "running", clock: { ...state.clock, paused: false } } : state;
         case "SET_SPEED":
             return { ...state, clock: { ...state.clock, speed: action.speed } };
         case "START_NEXT_WAVE":
@@ -46,9 +40,8 @@ function applyAction(state, action, level) {
 function buildHero(state, slotId, heroArchetype, level) {
     const slot = state.towerSlots.find((candidate) => candidate.id === slotId);
     const config = level?.heroConfigs?.find((candidate) => candidate.archetype === heroArchetype);
-    if (!slot || !config || !slot.unlocked || slot.occupiedByHeroId || state.resources.gold < config.buildCost) {
+    if (!slot || !config || !slot.unlocked || slot.occupiedByHeroId || state.resources.gold < config.buildCost)
         return state;
-    }
     const hero = {
         id: `hero-${state.heroes.length + 1}`,
         archetype: heroArchetype,
@@ -62,19 +55,17 @@ function buildHero(state, slotId, heroArchetype, level) {
     };
     return {
         ...state,
-        resources: {
-            ...state.resources,
-            gold: state.resources.gold - config.buildCost,
-        },
+        resources: { ...state.resources, gold: state.resources.gold - config.buildCost },
         heroes: [...state.heroes, hero],
         towerSlots: state.towerSlots.map((candidate) => candidate.id === slot.id ? { ...candidate, occupiedByHeroId: hero.id } : candidate),
     };
 }
+function getHeroConfig(level, hero) {
+    return level?.heroConfigs?.find((candidate) => candidate.archetype === hero.archetype);
+}
 function getSkillCooldownTicks(level, hero, fixedDeltaMs) {
     const config = getHeroConfig(level, hero);
-    if (config?.skillCooldownMs === undefined)
-        return DEFAULT_HERO_SKILL_COOLDOWN_TICKS;
-    return Math.max(1, Math.ceil(config.skillCooldownMs / fixedDeltaMs));
+    return config?.skillCooldownMs === undefined ? DEFAULT_HERO_SKILL_COOLDOWN_TICKS : Math.max(1, Math.ceil(config.skillCooldownMs / fixedDeltaMs));
 }
 function getSkillManaCost(level, hero) {
     return getHeroConfig(level, hero)?.skillManaCost ?? DEFAULT_HERO_SKILL_MANA_COST;
@@ -96,14 +87,8 @@ function castSkill(state, heroId, targetEnemyId, level) {
     return syncSettlementState({
         ...state,
         crystal: killedCarrier ? dropCrystal(state.crystal, killedCarrier, state.clock.tick, level) : state.crystal,
-        resources: {
-            ...state.resources,
-            gold: state.resources.gold + rewardGold,
-            manaCrystal: state.resources.manaCrystal - manaCost,
-        },
-        heroes: state.heroes.map((candidate) => candidate.id === heroId
-            ? { ...candidate, cooldownTicksRemaining: getSkillCooldownTicks(level, candidate, state.clock.fixedDeltaMs) }
-            : candidate),
+        resources: { ...state.resources, gold: state.resources.gold + rewardGold, manaCrystal: state.resources.manaCrystal - manaCost },
+        heroes: state.heroes.map((candidate) => candidate.id === heroId ? { ...candidate, cooldownTicksRemaining: getSkillCooldownTicks(level, candidate, state.clock.fixedDeltaMs) } : candidate),
         enemies: result.enemies,
         wave: result.killedEnemies.length > 0 && state.wave.isWaveActive
             ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + result.killedEnemies.length }
@@ -137,12 +122,7 @@ function applyHookSkill(enemies, hero, target, level, config) {
     addDamage(mutations, target.id, getSkillDamage(level, hero));
     addPull(mutations, target.id, config.skillPullDistance ?? DEFAULT_HOOK_PULL_DISTANCE);
     if (target.carryingCrystal) {
-        addStatusEffect(mutations, target.id, {
-            type: "stun",
-            remainingTicks: msToTicks(config.skillStunMs ?? 1_000, level),
-            speedMultiplier: 0,
-            sourceHeroId: hero.id,
-        });
+        addStatusEffect(mutations, target.id, { type: "stun", remainingTicks: msToTicks(config.skillStunMs ?? 1_000, level), speedMultiplier: 0, sourceHeroId: hero.id });
     }
     return applyEnemyMutations(enemies, mutations, level);
 }
@@ -157,9 +137,7 @@ function applyFrostSkill(enemies, hero, target, level, config) {
         addStatusEffect(mutations, enemy.id, {
             type: "slow",
             remainingTicks: slowTicks,
-            speedMultiplier: enemy.carryingCrystal
-                ? Math.max(0.1, (config.skillSlowMultiplier ?? DEFAULT_FROST_SLOW_MULTIPLIER) - 0.15)
-                : config.skillSlowMultiplier ?? DEFAULT_FROST_SLOW_MULTIPLIER,
+            speedMultiplier: enemy.carryingCrystal ? Math.max(0.1, (config.skillSlowMultiplier ?? DEFAULT_FROST_SLOW_MULTIPLIER) - 0.15) : config.skillSlowMultiplier ?? DEFAULT_FROST_SLOW_MULTIPLIER,
             sourceHeroId: hero.id,
         });
     }
@@ -167,28 +145,18 @@ function applyFrostSkill(enemies, hero, target, level, config) {
 }
 function applyStormChainSkill(enemies, hero, target, level, config) {
     const mutations = new Map();
-    const baseJumps = config.skillJumpCount ?? DEFAULT_STORM_JUMP_COUNT;
-    const bonusJumps = hasControlStatus(target) ? config.skillBonusJumpsVsStatus ?? DEFAULT_STORM_BONUS_JUMPS_VS_STATUS : 0;
-    const maxHits = 1 + baseJumps + bonusJumps;
-    const chainTargets = selectChainTargets(enemies, target, maxHits, config.skillJumpRadius ?? DEFAULT_STORM_JUMP_RADIUS);
+    const maxHits = 1 + (config.skillJumpCount ?? DEFAULT_STORM_JUMP_COUNT) + (hasControlStatus(target) ? config.skillBonusJumpsVsStatus ?? DEFAULT_STORM_BONUS_JUMPS_VS_STATUS : 0);
+    const targets = selectChainTargets(enemies, target, maxHits, config.skillJumpRadius ?? DEFAULT_STORM_JUMP_RADIUS);
     const decay = config.skillJumpDecay ?? DEFAULT_STORM_JUMP_DECAY;
-    const baseDamage = getSkillDamage(level, hero);
-    chainTargets.forEach((enemy, index) => {
-        addDamage(mutations, enemy.id, Math.round(baseDamage * Math.pow(decay, index)));
-    });
+    targets.forEach((enemy, index) => addDamage(mutations, enemy.id, Math.round(getSkillDamage(level, hero) * Math.pow(decay, index))));
     return applyEnemyMutations(enemies, mutations, level);
 }
 function applyMoonbladeSkill(enemies, hero, target, level, config) {
     const mutations = new Map();
-    const maxHits = 1 + (config.skillBounceCount ?? DEFAULT_MOONBLADE_BOUNCE_COUNT);
-    const bounceTargets = selectChainTargets(enemies, target, maxHits, config.skillJumpRadius ?? DEFAULT_STORM_JUMP_RADIUS);
+    const targets = selectChainTargets(enemies, target, 1 + (config.skillBounceCount ?? DEFAULT_MOONBLADE_BOUNCE_COUNT), config.skillJumpRadius ?? DEFAULT_STORM_JUMP_RADIUS);
     const decay = config.skillBounceDecay ?? DEFAULT_MOONBLADE_BOUNCE_DECAY;
-    const baseDamage = getSkillDamage(level, hero);
-    const bonusMultiplier = config.skillBonusDamageVsStatusMultiplier ?? DEFAULT_MOONBLADE_BONUS_DAMAGE_VS_STATUS;
-    bounceTargets.forEach((enemy, index) => {
-        const statusBonus = hasControlStatus(enemy) ? bonusMultiplier : 1;
-        addDamage(mutations, enemy.id, Math.round(baseDamage * Math.pow(decay, index) * statusBonus));
-    });
+    const bonus = config.skillBonusDamageVsStatusMultiplier ?? DEFAULT_MOONBLADE_BONUS_DAMAGE_VS_STATUS;
+    targets.forEach((enemy, index) => addDamage(mutations, enemy.id, Math.round(getSkillDamage(level, hero) * Math.pow(decay, index) * (hasControlStatus(enemy) ? bonus : 1))));
     return applyEnemyMutations(enemies, mutations, level);
 }
 function selectChainTargets(enemies, firstTarget, maxHits, radius) {
@@ -229,31 +197,21 @@ function applyEnemyMutations(enemies, mutations, level) {
         if (!mutation)
             return enemy;
         let nextEnemy = mutation.damage > 0 ? { ...enemy, health: enemy.health - mutation.damage } : enemy;
-        if (nextEnemy.health > 0 && mutation.statusEffects.length > 0) {
+        if (nextEnemy.health > 0 && mutation.statusEffects.length > 0)
             nextEnemy = withAddedStatusEffects(nextEnemy, mutation.statusEffects);
-        }
-        if (nextEnemy.health > 0 && mutation.pullDistance > 0 && level) {
+        if (nextEnemy.health > 0 && mutation.pullDistance > 0 && level)
             nextEnemy = moveEnemyAlongPath(nextEnemy, level, mutation.pullDistance, -1);
-        }
         return nextEnemy;
     });
-    return {
-        enemies: mutatedEnemies.filter((enemy) => enemy.health > 0),
-        killedEnemies: mutatedEnemies.filter((enemy) => enemy.health <= 0),
-    };
+    return { enemies: mutatedEnemies.filter((enemy) => enemy.health > 0), killedEnemies: mutatedEnemies.filter((enemy) => enemy.health <= 0) };
 }
 function withAddedStatusEffects(enemy, statusEffects) {
-    return {
-        ...enemy,
-        statusEffects: [...(enemy.statusEffects ?? []), ...statusEffects].filter((statusEffect) => statusEffect.remainingTicks > 0),
-    };
+    return { ...enemy, statusEffects: [...(enemy.statusEffects ?? []), ...statusEffects].filter((statusEffect) => statusEffect.remainingTicks > 0) };
 }
 function decayStatusEffects(enemy) {
     if (!enemy.statusEffects?.length)
         return enemy;
-    const statusEffects = enemy.statusEffects
-        .map((statusEffect) => ({ ...statusEffect, remainingTicks: statusEffect.remainingTicks - 1 }))
-        .filter((statusEffect) => statusEffect.remainingTicks > 0);
+    const statusEffects = enemy.statusEffects.map((statusEffect) => ({ ...statusEffect, remainingTicks: statusEffect.remainingTicks - 1 })).filter((statusEffect) => statusEffect.remainingTicks > 0);
     if (statusEffects.length === 0) {
         const { statusEffects: _statusEffects, ...enemyWithoutStatusEffects } = enemy;
         return enemyWithoutStatusEffects;
@@ -267,50 +225,38 @@ function distance(a, b) {
     return Math.hypot(b.x - a.x, b.y - a.y);
 }
 function interpolate(a, b, progress) {
-    return {
-        x: a.x + (b.x - a.x) * progress,
-        y: a.y + (b.y - a.y) * progress,
-    };
+    return { x: a.x + (b.x - a.x) * progress, y: a.y + (b.y - a.y) * progress };
 }
 function getEnemyBaseSpeed(level, enemy) {
-    return level?.enemies?.find((candidate) => candidate.archetype === enemy.archetype)?.speedUnitsPerSecond ??
-        DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND;
+    return level?.enemies?.find((candidate) => candidate.archetype === enemy.archetype)?.speedUnitsPerSecond ?? DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND;
 }
 function getEnemySpeed(level, enemy) {
     return getEnemyBaseSpeed(level, enemy) * getStatusSpeedMultiplier(enemy);
 }
 function getStatusSpeedMultiplier(enemy) {
-    const activeStatusEffects = enemy.statusEffects?.filter((statusEffect) => statusEffect.remainingTicks > 0) ?? [];
-    if (activeStatusEffects.some((statusEffect) => statusEffect.type === "stun"))
+    const active = enemy.statusEffects?.filter((statusEffect) => statusEffect.remainingTicks > 0) ?? [];
+    if (active.some((statusEffect) => statusEffect.type === "stun"))
         return 0;
-    const slowMultipliers = activeStatusEffects
-        .filter((statusEffect) => statusEffect.type === "slow")
-        .map((statusEffect) => statusEffect.speedMultiplier ?? 1);
-    return slowMultipliers.length > 0 ? Math.min(...slowMultipliers) : 1;
+    const slows = active.filter((statusEffect) => statusEffect.type === "slow").map((statusEffect) => statusEffect.speedMultiplier ?? 1);
+    return slows.length > 0 ? Math.min(...slows) : 1;
 }
 function hasControlStatus(enemy) {
     return Boolean(enemy.statusEffects?.some((statusEffect) => statusEffect.remainingTicks > 0 && (statusEffect.type === "slow" || statusEffect.type === "stun")));
 }
 function advanceEnemyAlongPath(enemy, level) {
-    const direction = enemy.carryingCrystal ? -1 : 1;
+    const direction = enemy.carryingCrystal || enemy.returningToStart ? -1 : 1;
     if (!level || level.path.length < 2) {
-        return {
-            ...enemy,
-            progress: Math.max(0, Math.min(1, enemy.progress + direction * 0.05 * getStatusSpeedMultiplier(enemy))),
-        };
+        return { ...enemy, progress: Math.max(0, Math.min(1, enemy.progress + direction * 0.05 * getStatusSpeedMultiplier(enemy))) };
     }
-    const remainingDistance = getEnemySpeed(level, enemy) * (level.fixedDeltaMs / 1000);
-    return moveEnemyAlongPath(enemy, level, remainingDistance, direction);
+    return moveEnemyAlongPath(enemy, level, getEnemySpeed(level, enemy) * (level.fixedDeltaMs / 1000), direction);
 }
 function moveEnemyAlongPath(enemy, level, distanceToMove, direction) {
-    const moved = movePathPosition({ pathIndex: enemy.pathIndex, progress: enemy.progress, position: enemy.position }, level, distanceToMove, direction);
-    return { ...enemy, ...moved };
+    return { ...enemy, ...movePathPosition({ pathIndex: enemy.pathIndex, progress: enemy.progress, position: enemy.position }, level, distanceToMove, direction) };
 }
 function moveCrystalAlongPath(crystal, level, distanceToMove, direction) {
     if (crystal.pathIndex === undefined || crystal.progress === undefined || !crystal.position)
         return crystal;
-    const moved = movePathPosition({ pathIndex: crystal.pathIndex, progress: crystal.progress, position: crystal.position }, level, distanceToMove, direction);
-    return { ...crystal, ...moved };
+    return { ...crystal, ...movePathPosition({ pathIndex: crystal.pathIndex, progress: crystal.progress, position: crystal.position }, level, distanceToMove, direction) };
 }
 function movePathPosition(position, level, distanceToMove, direction) {
     const path = level.path;
@@ -363,9 +309,6 @@ function movePathPosition(position, level, distanceToMove, direction) {
     const segmentEnd = path[pathIndex + 1] ?? path[path.length - 1];
     return { pathIndex, progress, position: interpolate(segmentStart, segmentEnd, progress) };
 }
-function getHeroConfig(level, hero) {
-    return level?.heroConfigs?.find((candidate) => candidate.archetype === hero.archetype);
-}
 function getEnemyRewardGold(level, enemy) {
     return level?.enemies?.find((candidate) => candidate.archetype === enemy.archetype)?.rewardGold ?? 0;
 }
@@ -376,9 +319,7 @@ function selectTarget(hero, enemies, level) {
     const config = getHeroConfig(level, hero);
     if (!config)
         return undefined;
-    return enemies
-        .filter((enemy) => distance(hero.position, enemy.position) <= config.attackRange)
-        .sort((a, b) => enemyPathScore(b) - enemyPathScore(a))[0];
+    return enemies.filter((enemy) => distance(hero.position, enemy.position) <= config.attackRange).sort((a, b) => enemyPathScore(b) - enemyPathScore(a))[0];
 }
 function applyTowerCombat(state, level) {
     let enemies = [...state.enemies];
@@ -387,11 +328,8 @@ function applyTowerCombat(state, level) {
     let killedCarrier;
     const heroes = state.heroes.map((hero) => {
         const config = getHeroConfig(level, hero);
-        if (!config) {
-            return { ...hero, attackCooldownMs: Math.max(0, hero.attackCooldownMs - state.clock.fixedDeltaMs) };
-        }
         const cooledHero = { ...hero, attackCooldownMs: Math.max(0, hero.attackCooldownMs - state.clock.fixedDeltaMs) };
-        if (cooledHero.attackCooldownMs > 0)
+        if (!config || cooledHero.attackCooldownMs > 0)
             return cooledHero;
         const target = selectTarget(cooledHero, enemies, level);
         if (!target) {
@@ -399,16 +337,14 @@ function applyTowerCombat(state, level) {
             return untargetedHero;
         }
         let killedEnemy;
-        enemies = enemies
-            .map((enemy) => {
+        enemies = enemies.map((enemy) => {
             if (enemy.id !== target.id)
                 return enemy;
             const damaged = { ...enemy, health: enemy.health - config.attackDamage };
             if (damaged.health <= 0)
                 killedEnemy = damaged;
             return damaged;
-        })
-            .filter((enemy) => enemy.health > 0);
+        }).filter((enemy) => enemy.health > 0);
         if (killedEnemy) {
             rewardGold += getEnemyRewardGold(level, killedEnemy);
             killedCount += 1;
@@ -421,27 +357,14 @@ function applyTowerCombat(state, level) {
         ...state,
         heroes,
         enemies,
-        resources: {
-            ...state.resources,
-            gold: state.resources.gold + rewardGold,
-        },
+        resources: { ...state.resources, gold: state.resources.gold + rewardGold },
         crystal: killedCarrier ? dropCrystal(state.crystal, killedCarrier, state.clock.tick, level) : state.crystal,
-        wave: killedCount > 0 && state.wave.isWaveActive
-            ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + killedCount }
-            : state.wave,
+        wave: killedCount > 0 && state.wave.isWaveActive ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + killedCount } : state.wave,
     });
 }
 function stealCrystal(crystal, enemyId, tick) {
     const { position: _position, pathIndex: _pathIndex, progress: _progress, returnSpeedUnitsPerSecond: _returnSpeedUnitsPerSecond, ...withoutReturn } = crystal;
-    return {
-        ...withoutReturn,
-        atBase: false,
-        status: "carried",
-        carrierEnemyId: enemyId,
-        lastCarrierEnemyId: enemyId,
-        lastEvent: { type: "stolen", tick, enemyId },
-        stolenCount: crystal.stolenCount + 1,
-    };
+    return { ...withoutReturn, atBase: false, status: "carried", carrierEnemyId: enemyId, lastCarrierEnemyId: enemyId, lastEvent: { type: "stolen", tick, enemyId }, stolenCount: crystal.stolenCount + 1 };
 }
 function dropCrystal(crystal, carrier, tick, level) {
     const { carrierEnemyId: _carrierEnemyId, ...withoutCarrier } = crystal;
@@ -461,43 +384,23 @@ function dropCrystal(crystal, carrier, tick, level) {
 }
 function recoverCrystal(crystal, tick) {
     const { carrierEnemyId: _carrierEnemyId, position: _position, pathIndex: _pathIndex, progress: _progress, returnSpeedUnitsPerSecond: _returnSpeedUnitsPerSecond, ...withoutCarrierOrReturn } = crystal;
-    return {
-        ...withoutCarrierOrReturn,
-        atBase: true,
-        status: "recovered",
-        lastEvent: { type: "recovered", tick, enemyId: crystal.lastDroppedEnemyId ?? crystal.lastCarrierEnemyId },
-        recoveredCount: crystal.recoveredCount + 1,
-    };
+    return { ...withoutCarrierOrReturn, atBase: true, status: "recovered", lastEvent: { type: "recovered", tick, enemyId: crystal.lastDroppedEnemyId ?? crystal.lastCarrierEnemyId }, recoveredCount: crystal.recoveredCount + 1 };
 }
 function escapeCrystal(crystal, enemyId, tick) {
     const { position: _position, pathIndex: _pathIndex, progress: _progress, returnSpeedUnitsPerSecond: _returnSpeedUnitsPerSecond, ...withoutReturn } = crystal;
-    return {
-        ...withoutReturn,
-        atBase: false,
-        status: "escaped",
-        carrierEnemyId: enemyId,
-        lastCarrierEnemyId: enemyId,
-        lastEvent: { type: "escaped", tick, enemyId },
-        escapedCount: crystal.escapedCount + 1,
-    };
+    return { ...withoutReturn, atBase: false, status: "escaped", carrierEnemyId: enemyId, lastCarrierEnemyId: enemyId, lastEvent: { type: "escaped", tick, enemyId }, escapedCount: crystal.escapedCount + 1 };
 }
 function advanceReturningCrystal(state, level) {
-    if (!level || (state.crystal.status !== "returning" && state.crystal.status !== "dropped")) {
+    if (!level || (state.crystal.status !== "returning" && state.crystal.status !== "dropped"))
         return { crystal: state.crystal, enemies: state.enemies };
-    }
     const immediatePickup = pickUpReturningCrystal(state.crystal, state.enemies, state.clock.tick);
     if (immediatePickup)
         return immediatePickup;
-    const speed = state.crystal.returnSpeedUnitsPerSecond ??
-        DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND * DEFAULT_CRYSTAL_RETURN_SPEED_MULTIPLIER;
+    const speed = state.crystal.returnSpeedUnitsPerSecond ?? DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND * DEFAULT_CRYSTAL_RETURN_SPEED_MULTIPLIER;
     const movedCrystal = moveCrystalAlongPath(state.crystal, level, speed * (state.clock.fixedDeltaMs / 1000), 1);
-    if (hasCrystalReachedAncient(movedCrystal, level)) {
+    if (hasCrystalReachedAncient(movedCrystal, level))
         return { crystal: recoverCrystal(movedCrystal, state.clock.tick), enemies: state.enemies };
-    }
-    return pickUpReturningCrystal(movedCrystal, state.enemies, state.clock.tick) ?? {
-        crystal: movedCrystal,
-        enemies: state.enemies,
-    };
+    return pickUpReturningCrystal(movedCrystal, state.enemies, state.clock.tick) ?? { crystal: movedCrystal, enemies: state.enemies };
 }
 function pickUpReturningCrystal(crystal, enemies, tick) {
     if (!crystal.position)
@@ -508,10 +411,7 @@ function pickUpReturningCrystal(crystal, enemies, tick) {
         .sort((a, b) => distance(a.position, crystal.position) - distance(b.position, crystal.position))[0];
     if (!pickupEnemy)
         return undefined;
-    return {
-        crystal: stealCrystal(crystal, pickupEnemy.id, tick),
-        enemies: enemies.map((enemy) => enemy.id === pickupEnemy.id ? { ...enemy, carryingCrystal: true } : enemy),
-    };
+    return { crystal: stealCrystal(crystal, pickupEnemy.id, tick), enemies: enemies.map((enemy) => enemy.id === pickupEnemy.id ? { ...enemy, carryingCrystal: true, returningToStart: true } : enemy) };
 }
 function hasCrystalReachedAncient(crystal, level) {
     const lastPathSegmentIndex = Math.max(0, level.path.length - 2);
@@ -523,19 +423,26 @@ function resolveCrystalAndBase(state, advancedEnemies, level) {
     let status = state.status;
     const enemies = [];
     const lastPathSegmentIndex = level?.path ? Math.max(0, level.path.length - 2) : 0;
+    const ancientPosition = level?.path[level.path.length - 1];
+    const startPosition = level?.path[0];
     for (const enemy of advancedEnemies) {
-        if (enemy.carryingCrystal && enemy.pathIndex === 0 && enemy.progress <= 0) {
-            baseHealth = Math.max(0, baseHealth - 1);
-            status = "lost";
-            crystal = escapeCrystal(crystal, enemy.id, state.clock.tick);
-            enemies.push({ ...enemy, progress: 0 });
+        if (enemy.pathIndex === 0 && enemy.progress <= 0 && (enemy.carryingCrystal || enemy.returningToStart)) {
+            if (enemy.carryingCrystal) {
+                baseHealth = Math.max(0, baseHealth - 1);
+                status = "lost";
+                crystal = escapeCrystal(crystal, enemy.id, state.clock.tick);
+                enemies.push({ ...enemy, progress: 0, ...(startPosition ? { position: startPosition } : {}) });
+            }
             continue;
         }
-        if (!enemy.carryingCrystal && enemy.progress >= 1 && enemy.pathIndex === lastPathSegmentIndex) {
+        if (!enemy.returningToStart && !enemy.carryingCrystal && enemy.progress >= 1 && enemy.pathIndex === lastPathSegmentIndex) {
             if (crystal.atBase) {
-                const carrier = { ...enemy, progress: 1, carryingCrystal: true };
+                const carrier = { ...enemy, progress: 1, carryingCrystal: true, returningToStart: true, ...(ancientPosition ? { position: ancientPosition } : {}) };
                 crystal = stealCrystal(crystal, carrier.id, state.clock.tick);
                 enemies.push(carrier);
+            }
+            else {
+                enemies.push({ ...enemy, progress: 1, returningToStart: true, ...(ancientPosition ? { position: ancientPosition } : {}) });
             }
             continue;
         }
@@ -568,42 +475,25 @@ function activateCurrentWave(state) {
 }
 function createEnemyFromConfig(level, archetype, sequence) {
     const config = level.enemies?.find((candidate) => candidate.archetype === archetype);
-    return {
-        id: `enemy-${sequence}`,
-        archetype,
-        pathIndex: 0,
-        progress: 0,
-        position: level.path[0] ?? { x: 0, y: 0 },
-        health: config?.maxHealth ?? 50,
-        maxHealth: config?.maxHealth ?? 50,
-        carryingCrystal: false,
-    };
+    return { id: `enemy-${sequence}`, archetype, pathIndex: 0, progress: 0, position: level.path[0] ?? { x: 0, y: 0 }, health: config?.maxHealth ?? 50, maxHealth: config?.maxHealth ?? 50, carryingCrystal: false };
 }
 function shouldAutoStartWave(state, level) {
     if (!state.wave.isWaitingNextWave || state.wave.isWaveActive)
         return false;
     const waveConfig = level.waves?.[state.wave.currentWaveIndex];
-    if (!waveConfig)
-        return false;
-    return state.clock.tick * state.clock.fixedDeltaMs >= waveConfig.startsAtMs;
+    return Boolean(waveConfig && state.clock.tick * state.clock.fixedDeltaMs >= waveConfig.startsAtMs);
 }
 function prepareWaveForTick(state, level) {
-    if (!level?.waves?.length || !shouldAutoStartWave(state, level))
-        return state;
-    return activateCurrentWave(state);
+    return level?.waves?.length && shouldAutoStartWave(state, level) ? activateCurrentWave(state) : state;
 }
 function advanceWave(state, level) {
     const preparedState = prepareWaveForTick(state, level);
-    if (!level?.waves?.length || !preparedState.wave.isWaveActive) {
+    if (!level?.waves?.length || !preparedState.wave.isWaveActive)
         return { enemies: preparedState.enemies, wave: preparedState.wave };
-    }
     const waveConfig = level.waves[preparedState.wave.currentWaveIndex];
     if (!waveConfig)
-        return { enemies: state.enemies, wave: state.wave };
-    let wave = {
-        ...preparedState.wave,
-        waveElapsedMs: preparedState.wave.waveElapsedMs + preparedState.clock.fixedDeltaMs,
-    };
+        return { enemies: preparedState.enemies, wave: preparedState.wave };
+    let wave = { ...preparedState.wave, waveElapsedMs: preparedState.wave.waveElapsedMs + preparedState.clock.fixedDeltaMs };
     const enemies = [...preparedState.enemies];
     while (wave.activeGroupIndex < waveConfig.spawnGroups.length) {
         const group = waveConfig.spawnGroups[wave.activeGroupIndex];
@@ -614,63 +504,32 @@ function advanceWave(state, level) {
         if (wave.waveElapsedMs < wave.nextSpawnElapsedMs)
             break;
         enemies.push(createEnemyFromConfig(level, group.enemyArchetype, wave.nextEnemySequence));
-        wave = {
-            ...wave,
-            spawnedCountInGroup: wave.spawnedCountInGroup + 1,
-            spawnedCountInWave: wave.spawnedCountInWave + 1,
-            nextEnemySequence: wave.nextEnemySequence + 1,
-            nextSpawnElapsedMs: wave.nextSpawnElapsedMs + group.intervalMs,
-        };
+        wave = { ...wave, spawnedCountInGroup: wave.spawnedCountInGroup + 1, spawnedCountInWave: wave.spawnedCountInWave + 1, nextEnemySequence: wave.nextEnemySequence + 1, nextSpawnElapsedMs: wave.nextSpawnElapsedMs + group.intervalMs };
     }
     const allGroupsSpawned = wave.activeGroupIndex >= waveConfig.spawnGroups.length;
     if (allGroupsSpawned && enemies.length === 0) {
         const nextWaveIndex = wave.currentWaveIndex + 1;
-        wave = {
-            ...wave,
-            currentWaveIndex: Math.min(nextWaveIndex, wave.totalWaves - 1),
-            waveElapsedMs: 0,
-            activeGroupIndex: 0,
-            spawnedCountInGroup: 0,
-            nextSpawnElapsedMs: 0,
-            isWaveActive: false,
-            isWaitingNextWave: nextWaveIndex < wave.totalWaves,
-        };
+        wave = { ...wave, currentWaveIndex: Math.min(nextWaveIndex, wave.totalWaves - 1), waveElapsedMs: 0, activeGroupIndex: 0, spawnedCountInGroup: 0, nextSpawnElapsedMs: 0, isWaveActive: false, isWaitingNextWave: nextWaveIndex < wave.totalWaves };
     }
     return { enemies, wave };
 }
 function advanceRunningTick(state, level) {
     const preparedState = prepareWaveForTick(state, level);
     const waveAdvanced = advanceWave(preparedState, level);
-    const movedState = {
-        ...preparedState,
-        enemies: waveAdvanced.enemies.map((enemy) => decayStatusEffects(advanceEnemyAlongPath(enemy, level))),
-        wave: waveAdvanced.wave,
-    };
+    const movedState = { ...preparedState, enemies: waveAdvanced.enemies.map((enemy) => decayStatusEffects(advanceEnemyAlongPath(enemy, level))), wave: waveAdvanced.wave };
     const combatState = applyTowerCombat(movedState, level);
     const crystalAdvanced = advanceReturningCrystal(combatState, level);
-    const crystalState = {
-        ...combatState,
-        crystal: crystalAdvanced.crystal,
-        enemies: crystalAdvanced.enemies,
-    };
+    const crystalState = { ...combatState, crystal: crystalAdvanced.crystal, enemies: crystalAdvanced.enemies };
     const resolved = resolveCrystalAndBase(crystalState, crystalState.enemies, level);
-    const completedAllWaves = waveAdvanced.wave.totalWaves > 0 &&
-        !waveAdvanced.wave.isWaveActive &&
-        !waveAdvanced.wave.isWaitingNextWave &&
-        resolved.enemies.length === 0 &&
-        resolved.crystal.atBase;
-    const nextStatus = completedAllWaves && resolved.status === "running" ? "won" : resolved.status;
+    const completedAllWaves = combatState.wave.totalWaves > 0 && !combatState.wave.isWaveActive && !combatState.wave.isWaitingNextWave && resolved.enemies.length === 0 && resolved.crystal.atBase;
     const nextState = {
         ...preparedState,
         ...resolved,
-        status: nextStatus,
+        status: completedAllWaves && resolved.status === "running" ? "won" : resolved.status,
         resources: combatState.resources,
         wave: combatState.wave,
         clock: { ...state.clock, tick: state.clock.tick + 1 },
-        heroes: combatState.heroes.map((hero) => ({
-            ...hero,
-            cooldownTicksRemaining: Math.max(0, hero.cooldownTicksRemaining - 1),
-        })),
+        heroes: combatState.heroes.map((hero) => ({ ...hero, cooldownTicksRemaining: Math.max(0, hero.cooldownTicksRemaining - 1) })),
         settlement: combatState.settlement,
     };
     return syncSettlementState(nextState);
@@ -680,9 +539,7 @@ function calculateStars(remainingCrystals, maxCrystals) {
         return 0;
     if (remainingCrystals === maxCrystals)
         return 3;
-    if (remainingCrystals / maxCrystals >= 0.5)
-        return 2;
-    return 1;
+    return remainingCrystals / maxCrystals >= 0.5 ? 2 : 1;
 }
 function getSettlementReason(state) {
     if (state.status === "won")
@@ -697,12 +554,11 @@ function createSettlementState(state) {
     const isVictory = state.status === "won";
     const isDefeat = state.status === "lost";
     const isComplete = isVictory || isDefeat;
-    const stars = isVictory ? calculateStars(state.baseHealth, state.maxBaseHealth) : 0;
     return {
         outcome: isVictory ? "victory" : isDefeat ? "defeat" : "pending",
         reason: getSettlementReason(state),
         isComplete,
-        stars,
+        stars: isVictory ? calculateStars(state.baseHealth, state.maxBaseHealth) : 0,
         remainingCrystals: state.baseHealth,
         maxCrystals: state.maxBaseHealth,
         recoveredCrystals: state.crystal.recoveredCount,
@@ -712,9 +568,7 @@ function createSettlementState(state) {
     };
 }
 function syncSettlementState(state) {
-    if (state.settlement.isComplete)
-        return state;
-    return { ...state, settlement: createSettlementState(state) };
+    return state.settlement.isComplete ? state : { ...state, settlement: createSettlementState(state) };
 }
 export function reduceActions(state, level) {
     const reduced = state.pendingActions.reduce((nextState, action) => applyAction(nextState, action, level), state);
@@ -722,9 +576,7 @@ export function reduceActions(state, level) {
 }
 export function stepFixedTick(state, level) {
     const reduced = reduceActions(state, level);
-    if (reduced.clock.paused || reduced.status !== "running")
-        return reduced;
-    return advanceRunningTick(reduced, level);
+    return reduced.clock.paused || reduced.status !== "running" ? reduced : advanceRunningTick(reduced, level);
 }
 export function stepSimulation(state, fixedTicks = 1, level) {
     let nextState = reduceActions(state, level);

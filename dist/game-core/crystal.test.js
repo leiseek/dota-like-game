@@ -135,8 +135,9 @@ test("a monster can intercept a returning crystal and immediately become the new
     assert.equal(intercepted.crystal.stolenCount, 2);
     assert.equal(intercepted.crystal.lastEvent?.type, "stolen");
     assert.equal(newCarrier?.carryingCrystal, true);
+    assert.equal(newCarrier?.returningToStart, true);
 });
-test("endpoint monsters leave without camping when the crystal is unavailable", () => {
+test("endpoint monsters return to the start instead of leaving through the Ancient", () => {
     const initial = createInitialGameState(straightLevel);
     const endpointEnemy = {
         id: "enemy-2",
@@ -148,7 +149,44 @@ test("endpoint monsters leave without camping when the crystal is unavailable", 
         maxHealth: 50,
         carryingCrystal: false,
     };
-    const noCrystalAtBase = stepSimulation(enqueueAction({
+    const turnedAround = stepSimulation(enqueueAction({
+        ...initial,
+        status: "running",
+        clock: { ...initial.clock, paused: false },
+        crystal: {
+            ...initial.crystal,
+            atBase: false,
+            status: "carried",
+            carrierEnemyId: "enemy-1",
+            lastCarrierEnemyId: "enemy-1",
+            lastEvent: { type: "stolen", tick: 0, enemyId: "enemy-1" },
+            stolenCount: 1,
+        },
+    }, { type: "SPAWN_ENEMY", enemy: endpointEnemy }), 1, straightLevel);
+    assert.equal(turnedAround.status, "running");
+    assert.equal(turnedAround.baseHealth, straightLevel.baseHealth);
+    assert.equal(turnedAround.enemies.length, 1);
+    assert.equal(turnedAround.enemies[0]?.returningToStart, true);
+    assert.equal(turnedAround.enemies[0]?.carryingCrystal, false);
+    assertNear(turnedAround.enemies[0]?.position.x, 100);
+    const leftFromStart = stepSimulation(turnedAround, 6, straightLevel);
+    assert.equal(leftFromStart.baseHealth, straightLevel.baseHealth);
+    assert.equal(leftFromStart.enemies.length, 0);
+    assert.equal(leftFromStart.crystal.stolenCount, 1);
+});
+test("endpoint monsters can intercept a returning crystal only by crossing it on the way back", () => {
+    const initial = createInitialGameState(straightLevel);
+    const endpointEnemy = {
+        id: "enemy-2",
+        archetype: "runner",
+        pathIndex: 0,
+        progress: 0.95,
+        position: { x: 95, y: 0 },
+        health: 50,
+        maxHealth: 50,
+        carryingCrystal: false,
+    };
+    const returningCrystal = stepSimulation(enqueueAction({
         ...initial,
         status: "running",
         clock: { ...initial.clock, paused: false },
@@ -166,15 +204,14 @@ test("endpoint monsters leave without camping when the crystal is unavailable", 
             droppedCount: 1,
         },
     }, { type: "SPAWN_ENEMY", enemy: endpointEnemy }), 1, straightLevel);
-    assert.equal(noCrystalAtBase.status, "running");
-    assert.equal(noCrystalAtBase.baseHealth, straightLevel.baseHealth);
-    assert.equal(noCrystalAtBase.enemies.length, 0);
-    assert.equal(noCrystalAtBase.crystal.status, "returning");
-    assert.equal(noCrystalAtBase.crystal.carrierEnemyId, undefined);
-    const recovered = stepSimulation(noCrystalAtBase, 6, straightLevel);
-    assert.equal(recovered.crystal.status, "recovered");
-    assert.equal(recovered.enemies.length, 0);
-    assert.equal(recovered.crystal.stolenCount, 1);
+    assert.equal(returningCrystal.enemies[0]?.returningToStart, true);
+    assert.equal(returningCrystal.enemies[0]?.carryingCrystal, false);
+    assert.equal(returningCrystal.crystal.status, "returning");
+    const intercepted = stepSimulation(returningCrystal, 1, straightLevel);
+    assert.equal(intercepted.crystal.status, "carried");
+    assert.equal(intercepted.crystal.carrierEnemyId, "enemy-2");
+    assert.equal(intercepted.enemies[0]?.carryingCrystal, true);
+    assert.equal(intercepted.enemies[0]?.returningToStart, true);
 });
 test("a carrier escaping with the crystal deducts exactly one crystal at the start", () => {
     const shortLevel = {

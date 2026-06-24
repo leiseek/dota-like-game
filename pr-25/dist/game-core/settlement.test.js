@@ -122,11 +122,11 @@ test("cleared waves do not settle while a dropped crystal is still returning", (
             isWaitingNextWave: false,
         },
     };
-    const returning = stepSimulation(enqueueAction(withCarrier, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }), 1, returnLevel);
+    const returning = stepSimulation(enqueueAction(withCarrier, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }), 0, returnLevel);
     assert.equal(returning.status, "running");
     assert.equal(returning.settlement.outcome, "pending");
     assert.equal(returning.crystal.status, "returning");
-    const completed = stepSimulation(returning, 4, returnLevel);
+    const completed = stepSimulation(returning, 6, returnLevel);
     assert.equal(completed.status, "won");
     assert.equal(completed.settlement.outcome, "victory");
     assert.equal(completed.crystal.status, "recovered");

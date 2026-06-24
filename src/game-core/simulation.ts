@@ -1,4 +1,5 @@
 import type {
+  CrystalState,
   Enemy,
   GameAction,
   GameState,
@@ -122,12 +123,12 @@ function castSkill(state: GameState, heroId: string, targetEnemyId: string, leve
   if (state.resources.manaCrystal < manaCost) return state;
 
   const result = applySkillEffect(state.enemies, hero, target, level);
-  const killedCarrier = result.killedEnemies.some((enemy) => enemy.carryingCrystal);
+  const killedCarrier = result.killedEnemies.find((enemy) => enemy.carryingCrystal);
   const rewardGold = result.killedEnemies.reduce((sum, enemy) => sum + getEnemyRewardGold(level, enemy), 0);
 
   return {
     ...state,
-    crystal: killedCarrier ? { atBase: true } : state.crystal,
+    crystal: killedCarrier ? recoverCrystal(state.crystal, killedCarrier.id, state.clock.tick) : state.crystal,
     resources: {
       ...state.resources,
       gold: state.resources.gold + rewardGold,
@@ -478,7 +479,7 @@ function applyTowerCombat(state: GameState, level?: LevelConfig): GameState {
   let enemies = [...state.enemies];
   let rewardGold = 0;
   let killedCount = 0;
-  let recoveredCrystal = false;
+  let recoveredCrystalEnemyId: string | undefined;
 
   const heroes = state.heroes.map((hero) => {
     const config = getHeroConfig(level, hero);
@@ -508,7 +509,7 @@ function applyTowerCombat(state: GameState, level?: LevelConfig): GameState {
     if (killedEnemy) {
       rewardGold += getEnemyRewardGold(level, killedEnemy);
       killedCount += 1;
-      recoveredCrystal = recoveredCrystal || killedEnemy.carryingCrystal;
+      if (killedEnemy.carryingCrystal) recoveredCrystalEnemyId = killedEnemy.id;
     }
 
     return { ...cooledHero, attackCooldownMs: config.attackIntervalMs, targetEnemyId: target.id };
@@ -522,10 +523,48 @@ function applyTowerCombat(state: GameState, level?: LevelConfig): GameState {
       ...state.resources,
       gold: state.resources.gold + rewardGold,
     },
-    crystal: recoveredCrystal ? { atBase: true } : state.crystal,
+    crystal: recoveredCrystalEnemyId ? recoverCrystal(state.crystal, recoveredCrystalEnemyId, state.clock.tick) : state.crystal,
     wave: killedCount > 0 && state.wave.isWaveActive
       ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + killedCount }
       : state.wave,
+  };
+}
+
+function stealCrystal(crystal: CrystalState, enemyId: string, tick: number): CrystalState {
+  return {
+    ...crystal,
+    atBase: false,
+    status: "carried",
+    carrierEnemyId: enemyId,
+    lastCarrierEnemyId: enemyId,
+    lastEvent: { type: "stolen", tick, enemyId },
+    stolenCount: crystal.stolenCount + 1,
+  };
+}
+
+function recoverCrystal(crystal: CrystalState, enemyId: string, tick: number): CrystalState {
+  const { carrierEnemyId: _carrierEnemyId, ...withoutCarrier } = crystal;
+  return {
+    ...withoutCarrier,
+    atBase: true,
+    status: "recovered",
+    lastCarrierEnemyId: enemyId,
+    lastDroppedEnemyId: enemyId,
+    lastEvent: { type: "recovered", tick, enemyId },
+    droppedCount: crystal.droppedCount + 1,
+    recoveredCount: crystal.recoveredCount + 1,
+  };
+}
+
+function escapeCrystal(crystal: CrystalState, enemyId: string, tick: number): CrystalState {
+  return {
+    ...crystal,
+    atBase: false,
+    status: "escaped",
+    carrierEnemyId: enemyId,
+    lastCarrierEnemyId: enemyId,
+    lastEvent: { type: "escaped", tick, enemyId },
+    escapedCount: crystal.escapedCount + 1,
   };
 }
 
@@ -538,7 +577,7 @@ function resolveCrystalAndBase(state: GameState, advancedEnemies: readonly Enemy
   for (const enemy of advancedEnemies) {
     if (enemy.carryingCrystal && enemy.pathIndex === 0 && enemy.progress <= 0) {
       status = "lost";
-      crystal = { atBase: false, carrierEnemyId: enemy.id };
+      crystal = escapeCrystal(crystal, enemy.id, state.clock.tick);
       enemies.push({ ...enemy, progress: 0 });
       continue;
     }
@@ -548,7 +587,7 @@ function resolveCrystalAndBase(state: GameState, advancedEnemies: readonly Enemy
     if (!enemy.carryingCrystal && enemy.progress >= 1 && enemy.pathIndex === lastPathSegmentIndex) {
       if (crystal.atBase) {
         const carrier = { ...enemy, progress: 1, carryingCrystal: true };
-        crystal = { atBase: false, carrierEnemyId: carrier.id };
+        crystal = stealCrystal(crystal, carrier.id, state.clock.tick);
         enemies.push(carrier);
       } else {
         baseHealth = Math.max(0, baseHealth - 1);

@@ -2,7 +2,7 @@
 
 AI Native hero-skill tower-defense project.
 
-Current documentation baseline: `v0.6.0`.
+Current documentation baseline: `v0.6.1`.
 
 ## Project Direction
 
@@ -18,7 +18,8 @@ The repository now contains a platform-neutral TypeScript `game-core` plus a lig
 
 - `src/game-core/`: platform-neutral battle simulation, state, actions, fixed tick, Level 001 config, waves, enemies, hero towers, combat, HUD selector, snapshots, hero-specific active skills, crystal recovery state, and settlement.
 - `platform-web/`: Canvas-based playtest/debug shell that renders `GameState`, dispatches `GameAction`, and stores local Battle Snapshots.
-- `.github/workflows/ci.yml`: checks pull requests and deploys the Web Preview to GitHub Pages on pushes to `main`.
+- `.github/workflows/ci.yml`: checks pull requests and deploys the main Web Preview to the `gh-pages` branch on pushes to `main`.
+- `.github/workflows/pr-preview.yml`: publishes each PR preview under `gh-pages/pr-<PR_NUMBER>/` and comments the preview URL on the PR.
 - `docs/`: versioned product, architecture, task, review, and handoff documentation.
 
 ## Run Checks
@@ -54,9 +55,17 @@ pages-dist/
 
 ## GitHub Pages Preview
 
-After GitHub Pages is enabled with source set to GitHub Actions, every push to `main` deploys the Web Preview.
+The project uses branch-based GitHub Pages deployment so the main preview and per-PR preview URLs can coexist.
 
-Expected URL:
+Repository setting:
+
+```text
+Settings → Pages → Build and deployment
+Source: Deploy from a branch
+Branch: gh-pages / /(root)
+```
+
+Main preview URL:
 
 ```text
 https://leiseek.github.io/dota-like-game/
@@ -68,9 +77,16 @@ The root page redirects to:
 https://leiseek.github.io/dota-like-game/platform-web/
 ```
 
-## v0.6.0 Contents
+PR preview URL pattern:
 
-- `.github/workflows/ci.yml`: CI and GitHub Pages deployment workflow
+```text
+https://leiseek.github.io/dota-like-game/pr-<PR_NUMBER>/platform-web/
+```
+
+## v0.6.1 Contents
+
+- `.github/workflows/ci.yml`: CI and branch-based GitHub Pages deployment workflow
+- `.github/workflows/pr-preview.yml`: PR preview deployment workflow
 - `scripts/build-pages.mjs`: GitHub Pages artifact builder
 - `AGENTS.md`: project-level instructions for Codex / AI coding agents
 - `docs/CODEX_HANDOFF.md`: Codex execution handoff

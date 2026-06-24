@@ -172,9 +172,146 @@ export type WaveRuntimeState = Readonly<{
 }>;
 ```
 
-## HUD Crystal State
+## Enemy
 
-`HudCrystalState` exposes crystal status, carrier ids, latest event, counters, and returning crystal path position. Platform adapters should render returning crystals from the HUD/core state rather than owning separate crystal motion.
+```ts
+export type StatusEffectType = "slow" | "stun";
+
+export type StatusEffectState = Readonly<{
+  type: StatusEffectType;
+  remainingTicks: number;
+  speedMultiplier?: number;
+  sourceHeroId?: EntityId;
+}>;
+
+export type Enemy = Readonly<{
+  id: EntityId;
+  archetype: string;
+  pathIndex: number;
+  progress: number;
+  position: Vector2;
+  health: number;
+  maxHealth: number;
+  carryingCrystal: boolean;
+  statusEffects?: readonly StatusEffectState[];
+}>;
+```
+
+Rules:
+
+- status effects must be serializable;
+- status duration is stored in fixed ticks, not wall-clock timers;
+- `slow` modifies enemy movement speed through `speedMultiplier`;
+- `stun` sets effective movement speed to zero while active;
+- active skill combo detection reads these status effects from `GameState`.
+
+## Hero
+
+```ts
+export type Hero = Readonly<{
+  id: EntityId;
+  archetype: string;
+  position: Vector2;
+  health: number;
+  maxHealth: number;
+  cooldownTicksRemaining: number;
+  attackCooldownMs: number;
+  targetEnemyId?: EntityId;
+  slotId?: string;
+  totalCost: number;
+}>;
+```
+
+## HeroConfig Skill Fields
+
+```ts
+export type SkillKind = "direct-damage" | "hook" | "frost" | "storm-chain" | "moonblade";
+```
+
+Hero skill behavior is data-driven through optional config fields:
+
+- `skillKind`;
+- `skillManaCost`;
+- `skillCooldownMs`;
+- `skillDamage`;
+- `skillPullDistance`;
+- `skillStunMs`;
+- `skillSlowMs`;
+- `skillSlowMultiplier`;
+- `skillRadius`;
+- `skillJumpCount`;
+- `skillJumpRadius`;
+- `skillJumpDecay`;
+- `skillBonusJumpsVsStatus`;
+- `skillBounceCount`;
+- `skillBounceDecay`;
+- `skillBonusDamageVsStatusMultiplier`.
+
+## HUD Crystal and Settlement State
+
+```ts
+export type HudCrystalState = Readonly<{
+  status: CrystalRuntimeStatus;
+  carrierEnemyId?: EntityId;
+  lastCarrierEnemyId?: EntityId;
+  lastDroppedEnemyId?: EntityId;
+  lastEventType?: CrystalEventType;
+  position?: Vector2;
+  pathIndex?: number;
+  progress?: number;
+  stolenCount: number;
+  droppedCount: number;
+  recoveredCount: number;
+  escapedCount: number;
+}>;
+```
+
+HUD must read crystal and settlement state from `selectHudState`; it must not inspect enemies directly to guess whether the crystal is stolen, returning, recovered, or escaped.
+
+## BattleSnapshot
+
+```ts
+export type GameSnapshot = Readonly<{
+  savedAtTick: number;
+  state: GameState;
+}>;
+```
+
+## GameAction
+
+```ts
+export type GameAction =
+  | Readonly<{ type: "START" }>
+  | Readonly<{ type: "PAUSE" }>
+  | Readonly<{ type: "RESUME" }>
+  | Readonly<{ type: "SET_SPEED"; speed: GameSpeed }>
+  | Readonly<{ type: "START_NEXT_WAVE" }>
+  | Readonly<{ type: "BUILD_HERO"; slotId: EntityId; heroArchetype: string }>
+  | Readonly<{ type: "PLACE_HERO"; hero: Hero }>
+  | Readonly<{ type: "CAST_SKILL"; heroId: EntityId; targetEnemyId: EntityId }>
+  | Readonly<{ type: "SPAWN_ENEMY"; enemy: Enemy }>;
+```
+
+## Save Timing
+
+| Scenario | Save? |
+|---|---|
+| manual save and exit | yes |
+| app background | yes |
+| WeChat onHide | yes |
+| wave end | yes |
+| boss start | yes |
+| battle end | clear battle snapshot, write meta save |
+
+## Restore Rules
+
+1. Load BattleSnapshot.
+2. Validate snapshot version.
+3. Validate levelId.
+4. Restore GameState.
+5. Force unfinished battle status to `paused`.
+6. Show resume confirmation.
+7. User confirmation resumes simulation.
 
 ## MVP Cut
 

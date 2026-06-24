@@ -119,7 +119,8 @@ function captureDamageNumbers(previousState: GameState, nextState: GameState): v
     const damage = nextEnemy ? previousEnemy.health - nextEnemy.health : previousEnemy.health;
     if (damage <= 0) continue;
 
-    addFloatingText(`-${Math.ceil(damage)}`, nextEnemy?.position ?? previousEnemy.position);
+    const hitPosition = nextEnemy ? nextEnemy.position : previousEnemy.position;
+    addFloatingText(`-${Math.ceil(damage)}`, hitPosition);
   }
 }
 
@@ -539,19 +540,20 @@ function drawSelectionPanel(): void {
   const selectedEnemy = selectedEnemyId ? gameState.enemies.find((enemy) => enemy.id === selectedEnemyId) : undefined;
   if (!selectedHero && !selectedEnemy) return;
 
+  const panelHeight = selectedHero && selectedEnemy ? 266 : 170;
   context.save();
   context.fillStyle = "rgba(0, 0, 0, 0.58)";
-  context.fillRect(620, 16, 324, selectedHero && selectedEnemy ? 266 : 170);
+  context.fillRect(620, 16, 324, panelHeight);
   context.strokeStyle = "rgba(255, 255, 255, 0.24)";
   context.lineWidth = 1.5;
-  context.strokeRect(620, 16, 324, selectedHero && selectedEnemy ? 266 : 170);
+  context.strokeRect(620, 16, 324, panelHeight);
 
-  let y = 44;
+  let nextY = 44;
   if (selectedHero) {
-    y = drawHeroPanel(selectedHero, 638, y);
+    nextY = drawHeroPanel(selectedHero, 638, nextY);
   }
   if (selectedEnemy) {
-    y = drawEnemyPanel(selectedEnemy, 638, y + (selectedHero ? 12 : 0));
+    drawEnemyPanel(selectedEnemy, 638, nextY + (selectedHero ? 12 : 0));
   }
   context.restore();
 }
@@ -567,7 +569,7 @@ function drawHeroPanel(hero: Hero, x: number, y: number): number {
   return y + 132;
 }
 
-function drawEnemyPanel(enemy: Enemy, x: number, y: number): number {
+function drawEnemyPanel(enemy: Enemy, x: number, y: number): void {
   const config = level001Config.enemies?.find((candidate) => candidate.archetype === enemy.archetype);
   drawPanelLine(x, y, `Enemy: ${enemy.archetype}`, "#ffd1dc", true);
   drawPanelLine(x, y + 22, `HP ${enemy.health}/${enemy.maxHealth} · Reward ${config?.rewardGold ?? 0}`, "rgba(255,255,255,0.86)");
@@ -575,7 +577,6 @@ function drawEnemyPanel(enemy: Enemy, x: number, y: number): number {
   drawPanelLine(x, y + 66, `State ${enemy.carryingCrystal ? "carrying crystal" : "advancing"}`, enemy.carryingCrystal ? "#ffe28a" : "rgba(255,255,255,0.86)");
   drawPanelLine(x, y + 88, `Buffs ${statusEffectsLabel(enemy)}`, "#bff8ff");
   drawPanelLine(x, y + 110, "Skill: steal crystal, escape to Start", "rgba(255,255,255,0.86)");
-  return y + 132;
 }
 
 function drawPanelLine(x: number, y: number, text: string, color: string, bold = false): void {
@@ -599,6 +600,8 @@ function skillLabel(hero: Hero): string {
     case "direct-damage":
       return "Direct damage";
   }
+
+  return "Direct damage";
 }
 
 function enemyPathLabel(enemy: Enemy): string {

@@ -523,7 +523,6 @@ function resolveCrystalAndBase(state, advancedEnemies, level) {
     let status = state.status;
     const enemies = [];
     const lastPathSegmentIndex = level?.path ? Math.max(0, level.path.length - 2) : 0;
-    const ancientPosition = level?.path[level.path.length - 1];
     for (const enemy of advancedEnemies) {
         if (enemy.carryingCrystal && enemy.pathIndex === 0 && enemy.progress <= 0) {
             baseHealth = Math.max(0, baseHealth - 1);
@@ -537,9 +536,6 @@ function resolveCrystalAndBase(state, advancedEnemies, level) {
                 const carrier = { ...enemy, progress: 1, carryingCrystal: true };
                 crystal = stealCrystal(crystal, carrier.id, state.clock.tick);
                 enemies.push(carrier);
-            }
-            else {
-                enemies.push({ ...enemy, progress: 1, ...(ancientPosition ? { position: ancientPosition } : {}) });
             }
             continue;
         }

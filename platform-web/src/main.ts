@@ -19,9 +19,10 @@ const LOGICAL_WIDTH = 960;
 const LOGICAL_HEIGHT = 540;
 const MAX_SUB_STEPS_PER_FRAME = 12;
 const SNAPSHOT_KEY = "ancient-defense:web-preview:snapshot";
+const DEFAULT_HERO_ARCHETYPE = "hook-guardian";
 
 const HERO_OPTIONS = [
-  "hook-guardian",
+  DEFAULT_HERO_ARCHETYPE,
   "frost-priestess",
   "storm-sigilist",
   "moonblade-ranger",
@@ -43,7 +44,7 @@ const abandonButton = mustGet<HTMLButtonElement>("abandon-button");
 
 let gameState: GameState = createInitialGameState(level001Config);
 let selectedHeroId: string | undefined;
-let selectedHeroArchetype: (typeof HERO_OPTIONS)[number] = HERO_OPTIONS[0];
+let selectedHeroArchetype: (typeof HERO_OPTIONS)[number] = DEFAULT_HERO_ARCHETYPE;
 let lastTimestamp = performance.now();
 let accumulatorMs = 0;
 
@@ -82,7 +83,7 @@ function mustGetContext(targetCanvas: HTMLCanvasElement): CanvasRenderingContext
 }
 
 function parseHeroArchetype(value: string): (typeof HERO_OPTIONS)[number] {
-  return HERO_OPTIONS.find((candidate) => candidate === value) ?? HERO_OPTIONS[0];
+  return HERO_OPTIONS.find((candidate) => candidate === value) ?? DEFAULT_HERO_ARCHETYPE;
 }
 
 function dispatch(action: GameAction): void {

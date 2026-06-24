@@ -22,6 +22,8 @@ const MAX_SUB_STEPS_PER_FRAME = 12;
 const SNAPSHOT_KEY = "ancient-defense:web-preview:snapshot";
 const DEFAULT_HERO_ARCHETYPE = "hook-guardian";
 const FLOATING_TEXT_DURATION_MS = 900;
+const PROJECTILE_DURATION_MS = 260;
+const HIT_EFFECT_DURATION_MS = 340;
 
 const HERO_OPTIONS = [
   DEFAULT_HERO_ARCHETYPE,
@@ -33,12 +35,40 @@ const HERO_OPTIONS = [
 const SPEED_CYCLE = [1, 2, 5, 10] as const;
 
 type HeroArchetype = (typeof HERO_OPTIONS)[number];
+type CombatVfxStyle = "basic" | "hook" | "frost" | "storm" | "moonblade";
 
 type FloatingText = {
   text: string;
   position: Vector2;
   ageMs: number;
   durationMs: number;
+};
+
+type ProjectileEffect = {
+  type: "projectile";
+  style: CombatVfxStyle;
+  start: Vector2;
+  end: Vector2;
+  ageMs: number;
+  durationMs: number;
+};
+
+type HitEffect = {
+  type: "hit";
+  style: CombatVfxStyle;
+  position: Vector2;
+  ageMs: number;
+  durationMs: number;
+};
+
+type CombatEffect = ProjectileEffect | HitEffect;
+
+const COMBAT_VFX: Record<CombatVfxStyle, { projectile: string; glow: string; hit: string; radius: number; lineWidth: number }> = {
+  basic: { projectile: "#fff1a8", glow: "rgba(255, 241, 168, 0.2)", hit: "rgba(255, 241, 168, 0.8)", radius: 9, lineWidth: 2 },
+  hook: { projectile: "#d8f0ff", glow: "rgba(154, 209, 255, 0.24)", hit: "rgba(216, 240, 255, 0.85)", radius: 11, lineWidth: 3 },
+  frost: { projectile: "#bff8ff", glow: "rgba(191, 248, 255, 0.24)", hit: "rgba(191, 248, 255, 0.88)", radius: 13, lineWidth: 3 },
+  storm: { projectile: "#f4ddff", glow: "rgba(244, 221, 255, 0.25)", hit: "rgba(244, 221, 255, 0.92)", radius: 12, lineWidth: 3 },
+  moonblade: { projectile: "#ffe28a", glow: "rgba(255, 226, 138, 0.26)", hit: "rgba(255, 226, 138, 0.9)", radius: 12, lineWidth: 3 },
 };
 
 const HERO_DISPLAY_NAMES: Record<string, string> = {
@@ -77,6 +107,7 @@ let selectedHeroId: string | undefined;
 let selectedEnemyId: string | undefined;
 let selectedHeroArchetype: HeroArchetype = DEFAULT_HERO_ARCHETYPE;
 let floatingTexts: FloatingText[] = [];
+let combatEffects: CombatEffect[] = [];
 let lastTimestamp = performance.now();
 let accumulatorMs = 0;
 
@@ -125,7 +156,7 @@ function dispatch(action: GameAction): void {
 }
 
 function setGameState(nextState: GameState): void {
-  captureDamageNumbers(gameState, nextState);
+  captureCombatFeedback(gameState, nextState);
   gameState = nextState;
 
   if (selectedHeroId && !gameState.heroes.some((hero) => hero.id === selectedHeroId)) {
@@ -136,15 +167,45 @@ function setGameState(nextState: GameState): void {
   }
 }
 
-function captureDamageNumbers(previousState: GameState, nextState: GameState): void {
+function captureCombatFeedback(previousState: GameState, nextState: GameState): void {
   for (const previousEnemy of previousState.enemies) {
     const nextEnemy = nextState.enemies.find((enemy) => enemy.id === previousEnemy.id);
     const damage = nextEnemy ? previousEnemy.health - nextEnemy.health : previousEnemy.health;
     if (damage <= 0) continue;
 
     const hitPosition = nextEnemy ? nextEnemy.position : previousEnemy.position;
+    const sourceHero = findCombatFeedbackHero(previousState, nextState, previousEnemy.id);
+    const style = sourceHero ? vfxStyleForHero(sourceHero) : "basic";
+
+    if (sourceHero) {
+      addProjectileEffect(sourceHero.position, hitPosition, style);
+    }
+    addHitEffect(hitPosition, style);
     addFloatingText(`-${Math.ceil(damage)}`, hitPosition);
   }
+}
+
+function findCombatFeedbackHero(previousState: GameState, nextState: GameState, enemyId: string): Hero | undefined {
+  return (
+    nextState.heroes.find((hero) => hero.targetEnemyId === enemyId) ??
+    previousState.heroes.find((hero) => hero.targetEnemyId === enemyId) ??
+    (selectedHeroId ? nextState.heroes.find((hero) => hero.id === selectedHeroId) : undefined) ??
+    (selectedHeroId ? previousState.heroes.find((hero) => hero.id === selectedHeroId) : undefined)
+  );
+}
+
+function addProjectileEffect(start: Vector2, end: Vector2, style: CombatVfxStyle): void {
+  combatEffects = [
+    ...combatEffects,
+    { type: "projectile", style, start, end, ageMs: 0, durationMs: PROJECTILE_DURATION_MS },
+  ].slice(-48);
+}
+
+function addHitEffect(position: Vector2, style: CombatVfxStyle): void {
+  combatEffects = [
+    ...combatEffects,
+    { type: "hit", style, position, ageMs: 0, durationMs: HIT_EFFECT_DURATION_MS },
+  ].slice(-48);
 }
 
 function addFloatingText(text: string, position: Vector2): void {
@@ -165,6 +226,12 @@ function updateFloatingTexts(deltaMs: number): void {
     .filter((floatingText) => floatingText.ageMs < floatingText.durationMs);
 }
 
+function updateCombatEffects(deltaMs: number): void {
+  combatEffects = combatEffects
+    .map((effect) => ({ ...effect, ageMs: effect.ageMs + deltaMs }))
+    .filter((effect) => effect.ageMs < effect.durationMs);
+}
+
 function runFrame(timestamp: number): void {
   const realDeltaMs = Math.min(250, timestamp - lastTimestamp);
   lastTimestamp = timestamp;
@@ -182,6 +249,7 @@ function runFrame(timestamp: number): void {
   }
 
   updateFloatingTexts(realDeltaMs);
+  updateCombatEffects(realDeltaMs);
   render();
   syncUi();
   requestAnimationFrame(runFrame);
@@ -311,6 +379,7 @@ function continueSavedBattle(): void {
     selectedHeroId = undefined;
     selectedEnemyId = undefined;
     floatingTexts = [];
+    combatEffects = [];
     accumulatorMs = 0;
     setMessage("已恢复存档，战斗处于暂停状态。");
     syncUi();
@@ -401,6 +470,7 @@ function render(): void {
   drawHeroes();
   drawEnemies();
   drawReturningCrystal();
+  drawCombatEffects();
   drawFloatingTexts();
   drawOverlayText();
   drawSelectionPanel();
@@ -567,6 +637,88 @@ function drawReturningCrystal(): void {
   context.restore();
 }
 
+function drawCombatEffects(): void {
+  for (const effect of combatEffects) {
+    if (effect.type === "projectile") drawProjectileEffect(effect);
+    else drawHitEffect(effect);
+  }
+}
+
+function drawProjectileEffect(effect: ProjectileEffect): void {
+  const style = COMBAT_VFX[effect.style];
+  const ratio = Math.min(1, effect.ageMs / effect.durationMs);
+  const head = interpolatePoint(effect.start, effect.end, ratio);
+  const tail = interpolatePoint(effect.start, effect.end, Math.max(0, ratio - 0.22));
+
+  context.save();
+  context.globalAlpha = Math.max(0, 1 - ratio * 0.25);
+  context.lineCap = "round";
+  context.strokeStyle = style.glow;
+  context.lineWidth = style.lineWidth + 7;
+  context.beginPath();
+  context.moveTo(tail.x, tail.y);
+  context.lineTo(head.x, head.y);
+  context.stroke();
+
+  context.strokeStyle = style.projectile;
+  context.lineWidth = style.lineWidth;
+  context.beginPath();
+  context.moveTo(tail.x, tail.y);
+  context.lineTo(head.x, head.y);
+  context.stroke();
+
+  if (effect.style === "hook") {
+    context.strokeStyle = "rgba(255,255,255,0.55)";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(effect.start.x, effect.start.y);
+    context.lineTo(head.x, head.y);
+    context.stroke();
+  }
+
+  context.fillStyle = style.projectile;
+  context.beginPath();
+  context.arc(head.x, head.y, effect.style === "storm" ? 4 : 3, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
+function drawHitEffect(effect: HitEffect): void {
+  const style = COMBAT_VFX[effect.style];
+  const ratio = Math.min(1, effect.ageMs / effect.durationMs);
+  const radius = style.radius + ratio * 16;
+
+  context.save();
+  context.globalAlpha = Math.max(0, 1 - ratio);
+  context.strokeStyle = style.hit;
+  context.lineWidth = Math.max(1, style.lineWidth - ratio);
+  context.beginPath();
+  context.arc(effect.position.x, effect.position.y, radius, 0, Math.PI * 2);
+  context.stroke();
+
+  if (effect.style === "frost") {
+    context.strokeStyle = "rgba(191,248,255,0.65)";
+    for (let index = 0; index < 6; index += 1) {
+      const angle = (Math.PI * 2 * index) / 6;
+      context.beginPath();
+      context.moveTo(effect.position.x, effect.position.y);
+      context.lineTo(effect.position.x + Math.cos(angle) * radius, effect.position.y + Math.sin(angle) * radius);
+      context.stroke();
+    }
+  }
+
+  if (effect.style === "storm") {
+    context.strokeStyle = "rgba(255,255,255,0.72)";
+    context.beginPath();
+    context.moveTo(effect.position.x - radius * 0.6, effect.position.y - radius * 0.15);
+    context.lineTo(effect.position.x, effect.position.y + radius * 0.18);
+    context.lineTo(effect.position.x + radius * 0.56, effect.position.y - radius * 0.08);
+    context.stroke();
+  }
+
+  context.restore();
+}
+
 function drawFloatingTexts(): void {
   context.save();
   context.font = "bold 18px system-ui, sans-serif";
@@ -583,10 +735,10 @@ function drawFloatingTexts(): void {
 function drawOverlayText(): void {
   context.save();
   context.fillStyle = "rgba(0, 0, 0, 0.34)";
-  context.fillRect(16, 456, 588, 68);
+  context.fillRect(16, 456, 612, 68);
   context.fillStyle = "rgba(255,255,255,0.86)";
   context.font = "16px system-ui, sans-serif";
-  context.fillText("点击塔位：建造 · 点击英雄：查看成长 · 点击敌人：查看/手动大招", 32, 486);
+  context.fillText("点击塔位：建造 · 点击英雄：查看成长 · 点击敌人：查看/手动大招 · 战斗会显示弹道和命中特效", 32, 486);
   context.fillText(`英雄：${selectedHeroId ?? "未选"} · 敌人：${selectedEnemyId ?? "未选"} · 水晶 ${crystalStatusLabel(gameState.crystal.status)}`, 32, 512);
   context.restore();
 }
@@ -596,7 +748,7 @@ function drawSelectionPanel(): void {
   const selectedEnemy = selectedEnemyId ? gameState.enemies.find((enemy) => enemy.id === selectedEnemyId) : undefined;
   if (!selectedHero && !selectedEnemy) return;
 
-  const heroHeight = selectedHero ? 230 : 0;
+  const heroHeight = selectedHero ? 248 : 0;
   const enemyHeight = selectedEnemy ? 142 : 0;
   const panelHeight = Math.max(170, heroHeight + enemyHeight + (selectedHero && selectedEnemy ? 18 : 0));
   context.save();
@@ -624,12 +776,12 @@ function drawHeroPanel(hero: Hero, x: number, y: number): number {
   drawPanelLine(x, y + 44, `生命 ${hero.health}/${hero.maxHealth} · 造价 ${hero.totalCost}`, "rgba(255,255,255,0.86)");
   drawPanelLine(x, y + 66, `普攻 ${config?.attackDamage ?? "?"} · 范围 ${config?.attackRange ?? "?"}`, "rgba(255,255,255,0.86)");
   drawPanelLine(x, y + 88, `大招：${skillLabel(hero)} · 无蓝耗`, "#ffe28a");
-  drawPanelLine(x, y + 110, `伤害 ${config?.skillDamage ?? "?"} · 冷却 ${cooldownSeconds(hero)}`, "rgba(255,255,255,0.86)");
+  drawPanelLine(x, y + 110, `伤害 ${config?.skillDamage ?? "?"} · 冷却 ${cooldownSeconds(hero)} · 特效 ${vfxStyleLabel(vfxStyleForHero(hero))}`, "rgba(255,255,255,0.86)");
   drawPanelLine(x, y + 132, "已解锁被动：", "#9ad1ff", true);
   passiveLines.slice(0, 5).forEach((line, index) => {
     drawPanelLine(x + 10, y + 154 + index * 18, `• ${line}`, "rgba(255,255,255,0.86)");
   });
-  return y + 250;
+  return y + 268;
 }
 
 function drawEnemyPanel(enemy: Enemy, x: number, y: number): void {
@@ -666,6 +818,37 @@ function skillLabel(hero: Hero): string {
       return "月刃弹射";
     case "direct-damage":
       return "直接伤害";
+  }
+}
+
+function vfxStyleForHero(hero: Pick<Hero, "archetype">): CombatVfxStyle {
+  const config = getHeroConfig(hero.archetype);
+  switch (config?.skillKind ?? "direct-damage") {
+    case "hook":
+      return "hook";
+    case "frost":
+      return "frost";
+    case "storm-chain":
+      return "storm";
+    case "moonblade":
+      return "moonblade";
+    case "direct-damage":
+      return "basic";
+  }
+}
+
+function vfxStyleLabel(style: CombatVfxStyle): string {
+  switch (style) {
+    case "basic":
+      return "通用";
+    case "hook":
+      return "钩锁";
+    case "frost":
+      return "冰霜";
+    case "storm":
+      return "雷电";
+    case "moonblade":
+      return "月刃";
   }
 }
 
@@ -770,6 +953,13 @@ function shortHeroName(archetype: string): string {
     .split("-")
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+function interpolatePoint(start: Vector2, end: Vector2, ratio: number): Vector2 {
+  return {
+    x: start.x + (end.x - start.x) * ratio,
+    y: start.y + (end.y - start.y) * ratio,
+  };
 }
 
 function distance(a: Vector2, b: Vector2): number {

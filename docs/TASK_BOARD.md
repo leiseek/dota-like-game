@@ -1,10 +1,10 @@
 ---
 doc_id: TASK_BOARD
-version: 0.3.10
+version: 0.4.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: SKILL-001 active skill resource and cooldown foundation completed
+change_summary: Web Playtest Preview shell completed and Demo 0.1 validation path added
 ---
 
 # Task Board
@@ -52,6 +52,12 @@ change_summary: SKILL-001 active skill resource and cooldown foundation complete
 | SAVE-001 | minimal Battle Snapshot | Engineering | Done | restore unfinished snapshots to paused state, preserve simulation data, and clear pending actions before resume confirmation |
 | REVIEW-002 | Phase 1 Technical Review | Self Review | Done | Phase 1 game-core foundation accepted with medium follow-up risk; see PHASE_1_TECHNICAL_REVIEW.md |
 
+## Web Preview Tasks
+
+| Task ID | Title | Owner Agent | Status | Acceptance Summary |
+|---|---|---|---|---|
+| WEB-001 | Web Playtest Preview shell | Platform Web + Engineering | Done | zero-dependency Canvas preview renders Level 001 state, dispatches GameAction controls, supports build/select/cast, pause/resume, 1x/2x/5x/10x, start-next-wave, and local snapshot continue |
+
 ## Next Demo 0.1 Tasks
 
 | Task ID | Title | Owner Agent | Status | Acceptance Summary |
@@ -63,15 +69,18 @@ change_summary: SKILL-001 active skill resource and cooldown foundation complete
 
 ## Execution Policy
 
-Unless the Project Owner explicitly asks to pause, continue implementing Phase 1 P0 tasks in table order. Do not stop merely because one task reaches Done; stop only when all Phase 1 P0 tasks are Done, a task is Blocked, or a PR/checkpoint is required by repository workflow.
+Unless the Project Owner explicitly asks to pause, continue implementing Demo 0.1 tasks in priority order. Visual validation through `platform-web` is allowed when it helps verify the core loop, but authoritative gameplay logic must remain in `src/game-core`.
 
 ## Current Implementation Note
 
-`MAP-001`, `WAVE-001`, `ENEMY-001`, `TOWER-001`, `COMBAT-001`, `HUD-001`, `SAVE-001`, `REVIEW-002`, and `SKILL-001` are complete. Continue with `SKILL-002` hero-specific active skill effects unless the owner reprioritizes crystal recovery or settlement work.
+`MAP-001`, `WAVE-001`, `ENEMY-001`, `TOWER-001`, `COMBAT-001`, `HUD-001`, `SAVE-001`, `REVIEW-002`, `SKILL-001`, and `WEB-001` are complete. Continue with `SKILL-002` hero-specific active skill effects unless the owner reprioritizes crystal recovery or settlement work.
 
 ## Self Review
 
 Review Result: Pass
-Main Issues: Hero-specific active skill effects, explicit crystal recovery state, obstacle destruction, settlement, and stronger snapshot validation remain follow-up work for Demo 0.1.
-Required Changes: Continue with `SKILL-002` while preserving core-first architecture and serializable GameState.
+
+Main Issues: Hero-specific active skill effects, explicit crystal recovery state, obstacle destruction, settlement, stronger snapshot validation, and Web Preview polish remain follow-up work for Demo 0.1.
+
+Required Changes: Continue with `SKILL-002` while preserving core-first architecture and using Web Preview only as a platform adapter.
+
 Risk Level: Medium

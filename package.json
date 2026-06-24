@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --test dist/**/*.test.js",
-    "check": "npm run build && npm run test"
+    "build:web": "npm run build && tsc -p platform-web/tsconfig.json",
+    "preview:web": "npm run build:web && node platform-web/dev-server.mjs",
+    "check": "npm run build && npm run test && tsc -p platform-web/tsconfig.json"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

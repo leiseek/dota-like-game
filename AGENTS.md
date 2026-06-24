@@ -9,8 +9,8 @@ The project is a 2D / pseudo-2.5D hero-skill tower-defense game. The player buil
 - Project Owner: Zach / ifanvip
 - Team Leader Agent: ChatGPT
 - Execution Model: AI Native Agent Team
-- Current document baseline: v0.3.0
-- Current phase: Phase 1 preparation / game-core implementation
+- Current document baseline: v0.4.0
+- Current phase: Demo 0.1 preparation / Web Playtest Preview + game-core iteration
 
 ## Mandatory Reading Order
 
@@ -30,6 +30,10 @@ Before implementing any task, read these files in order:
 For task handoff instructions, read:
 
 - `docs/CODEX_HANDOFF.md`
+
+For Web Preview work, also read:
+
+- `docs/WEB_PREVIEW_SPEC.md`
 
 ## Core Product Direction
 
@@ -56,14 +60,15 @@ The MVP must validate:
 
 ### 1. Core-first
 
-Game logic must be implemented in `game-core`.
+Game logic must be implemented in `src/game-core`.
 
 Do not bind battle logic to ArkUI, HarmonyOS APIs, WeChat Mini Game APIs, DOM, Canvas, or rendering code.
 
 Expected structure:
 
 ```text
-game-core/
+src/game-core/
+platform-web/
 platform-harmony/
 platform-wechat/
 docs/
@@ -94,6 +99,12 @@ Any implementation that prevents serializing and restoring battle state is unacc
 ### 6. Platform portability
 
 The game should eventually support HarmonyOS / ArkTS native shell and WeChat Mini Game shell. Keep the game core platform-neutral.
+
+### 7. Web Preview is validation, not the final platform
+
+`platform-web` may use DOM, Canvas, CSS, and `localStorage`, but it must only render/read core state, dispatch `GameAction`, and store/restore core snapshots.
+
+Do not move authoritative gameplay logic into `platform-web`.
 
 ## MVP Scope Control
 

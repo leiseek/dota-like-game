@@ -1,17 +1,17 @@
 ---
 doc_id: DOC_VERSION_INDEX
-version: 0.3.10
+version: 0.4.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: v0.3.10 active skill foundation status updates
+change_summary: v0.4.0 Web Playtest Preview documentation updates
 ---
 
 # Document Version Index
 
 | Document | Version | Status | Owner Agent | Latest Change |
 |---|---:|---|---|---|
-| AGENTS.md | 0.3.0 | active | AI Workflow Agent | Codex project-level instructions |
+| AGENTS.md | 0.4.0 | active | AI Workflow Agent | Web Preview phase and platform boundary added |
 | CODEX_HANDOFF.md | 0.3.0 | active | AI Workflow Agent | Codex task handoff |
 | GDD.md | 0.2.0 | active | Game Director Agent | First level and core system design |
 | MVP_SCOPE.md | 0.1.0 | active | Executive Producer Agent | Demo 0.1 scope |
@@ -20,15 +20,16 @@ change_summary: v0.3.10 active skill foundation status updates
 | PHASE_0_SELF_REVIEW.md | 0.2.0 | active | Self Review Agent | Phase 0 review result |
 | PHASE_1_TECHNICAL_REVIEW.md | 0.1.0 | active | Self Review Agent | Phase 1 game-core technical review |
 | PLATFORM_STRATEGY.md | 0.1.0 | active | Platform Strategy Agent | HarmonyOS + WeChat Mini Game strategy |
-| TECH_ARCHITECTURE.md | 0.2.0 | active | Technical Architect Agent | core-first architecture |
+| TECH_ARCHITECTURE.md | 0.4.0 | active | Technical Architect Agent | current core-first architecture with Web Preview adapter |
 | GAME_STATE_SCHEMA.md | 0.2.0 | active | Technical Architect Agent | serializable battle state |
 | LEVEL_001.md | 0.2.0 | active | Level Designer Agent | first level design |
 | HERO_DESIGN.md | 0.2.0 | active | Combat Designer Agent | first hero set |
 | UI_UX_SPEC.md | 0.2.0 | active | UX/UI Agent | battle HUD and controls |
+| WEB_PREVIEW_SPEC.md | 0.1.0 | active | Platform Web Agent | Web Playtest Preview shell |
 | ROADMAP.md | 0.1.0 | active | Executive Producer Agent | phase roadmap |
-| TASK_BOARD.md | 0.3.10 | active | Team Leader Agent | SKILL-001 complete; SKILL-002 next |
-| DECISIONS.md | 0.3.0 | active | Team Leader Agent | ADR-0005 added |
-| CHANGELOG.md | 0.3.10 | active | Team Leader Agent | Active skill foundation recorded |
+| TASK_BOARD.md | 0.4.0 | active | Team Leader Agent | WEB-001 complete; SKILL-002 next |
+| DECISIONS.md | 0.4.0 | active | Team Leader Agent | ADR-0006 added |
+| CHANGELOG.md | 0.4.0 | active | Team Leader Agent | Web Playtest Preview recorded |
 
 ## Status Definitions
 

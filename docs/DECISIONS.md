@@ -1,10 +1,10 @@
 ---
 doc_id: DECISIONS
-version: 0.3.0
+version: 0.4.0
 status: active
 owner_agent: Team Leader Agent
-last_updated: 2026-06-23
-change_summary: key architecture and workflow decisions through ADR-0005
+last_updated: 2026-06-24
+change_summary: ADR-0006 accepted for Web Playtest Preview
 ---
 
 # Decision Log
@@ -89,3 +89,27 @@ Chat context does not reliably transfer to Codex. Versioned repository docs are 
 ### Impact
 
 Every coding task must read `AGENTS.md` first and update docs as part of completion.
+
+---
+
+## ADR-0006: Build Web Playtest Preview before platform-native shells
+
+- Date: 2026-06-24
+- Status: Accepted
+
+### Decision
+
+Create a lightweight `platform-web` shell before HarmonyOS or WeChat platform shells.
+
+The Web shell is a playable/debug preview for Demo 0.1. It renders `GameState`, dispatches `GameAction`, uses fixed-step advancement through `stepSimulation`, and stores local Battle Snapshots through core snapshot helpers.
+
+### Rationale
+
+The project now has enough platform-neutral core code to validate the gameplay loop visually. A Web Preview is the fastest way to evaluate map readability, 10x speed behavior, skill targeting, crystal theft feedback, and save/continue behavior without compromising the cross-platform architecture.
+
+### Impact
+
+- `platform-web` may use DOM, Canvas, CSS, and `localStorage`.
+- `src/game-core` must remain platform-neutral.
+- The Web shell is not the final product UI and must not introduce authoritative battle state outside the core.
+- Future `SKILL-002`, `CRYSTAL-001`, and `SETTLEMENT-001` work should be validated through Web Preview when useful.

@@ -1,10 +1,10 @@
 ---
 doc_id: DOC_VERSION_INDEX
-version: 0.4.1
+version: 0.4.2
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: v0.4.1 hero-specific active skill effects documentation updates
+change_summary: v0.4.2 explicit crystal recovery runtime state documentation updates
 ---
 
 # Document Version Index
@@ -21,15 +21,15 @@ change_summary: v0.4.1 hero-specific active skill effects documentation updates
 | PHASE_1_TECHNICAL_REVIEW.md | 0.1.0 | active | Self Review Agent | Phase 1 game-core technical review |
 | PLATFORM_STRATEGY.md | 0.1.0 | active | Platform Strategy Agent | HarmonyOS + WeChat Mini Game strategy |
 | TECH_ARCHITECTURE.md | 0.4.0 | active | Technical Architect Agent | current core-first architecture with Web Preview adapter |
-| GAME_STATE_SCHEMA.md | 0.4.1 | active | Technical Architect Agent | active skill status effects added to serializable battle state |
+| GAME_STATE_SCHEMA.md | 0.4.2 | active | Technical Architect Agent | explicit crystal recovery runtime state added |
 | LEVEL_001.md | 0.2.0 | active | Level Designer Agent | first level design |
 | HERO_DESIGN.md | 0.2.0 | active | Combat Designer Agent | first hero set |
 | UI_UX_SPEC.md | 0.2.0 | active | UX/UI Agent | battle HUD and controls |
 | WEB_PREVIEW_SPEC.md | 0.1.0 | active | Platform Web Agent | Web Playtest Preview shell |
 | ROADMAP.md | 0.1.0 | active | Executive Producer Agent | phase roadmap |
-| TASK_BOARD.md | 0.4.1 | active | Team Leader Agent | SKILL-002 complete; CRYSTAL-001 next |
+| TASK_BOARD.md | 0.4.2 | active | Team Leader Agent | CRYSTAL-001 complete; SETTLEMENT-001 next |
 | DECISIONS.md | 0.4.0 | active | Team Leader Agent | ADR-0006 added |
-| CHANGELOG.md | 0.4.1 | active | Team Leader Agent | Hero-specific active skill effects recorded |
+| CHANGELOG.md | 0.4.2 | active | Team Leader Agent | Explicit crystal recovery runtime state recorded |
 
 ## Status Definitions
 

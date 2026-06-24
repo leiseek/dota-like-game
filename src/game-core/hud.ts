@@ -12,6 +12,7 @@ export function selectHudState(state: GameState): HudState {
     crystals: state.baseHealth,
     maxCrystals: state.maxBaseHealth,
     crystal: selectHudCrystalState(state),
+    settlement: state.settlement,
     gold: state.resources.gold,
     manaCrystal: state.resources.manaCrystal,
     wave: {

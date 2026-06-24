@@ -1,10 +1,10 @@
 ---
 doc_id: GAME_STATE_SCHEMA
-version: 0.4.1
+version: 0.4.2
 status: active
 owner_agent: Technical Architect Agent
 last_updated: 2026-06-24
-change_summary: active skill status effects added to serializable battle state
+change_summary: explicit crystal recovery runtime state added
 ---
 
 # GameState Schema
@@ -21,6 +21,7 @@ It must support:
 - exit-and-resume;
 - cross-platform reuse;
 - active skill effects;
+- explicit crystal theft and recovery feedback;
 - future replay and multiplayer preparation.
 
 ## Current Runtime Shape
@@ -65,6 +66,42 @@ export type ResourceState = Readonly<{
 ```
 
 `baseHealth` and `maxBaseHealth` currently represent remaining Ancient Crystals and maximum Ancient Crystals.
+
+## CrystalState
+
+```ts
+export type CrystalEventType = "stolen" | "dropped" | "recovered" | "escaped";
+export type CrystalRuntimeStatus = "safe" | "carried" | "recovered" | "escaped";
+
+export type CrystalEvent = Readonly<{
+  type: CrystalEventType;
+  tick: number;
+  enemyId?: EntityId;
+}>;
+
+export type CrystalState = Readonly<{
+  atBase: boolean;
+  status: CrystalRuntimeStatus;
+  carrierEnemyId?: EntityId;
+  lastCarrierEnemyId?: EntityId;
+  lastDroppedEnemyId?: EntityId;
+  lastEvent?: CrystalEvent;
+  stolenCount: number;
+  droppedCount: number;
+  recoveredCount: number;
+  escapedCount: number;
+}>;
+```
+
+Rules:
+
+- `safe`: crystal is at the base and has not recently been recovered from a carrier;
+- `carried`: an enemy is carrying the crystal back toward the start;
+- `recovered`: a carrier was killed and the crystal returned to base;
+- `escaped`: a carrier escaped with the crystal and the battle is lost;
+- `lastEvent` stores the latest crystal feedback event for HUD and platform adapters;
+- `droppedCount` increases when a carrier is killed, even though Demo 0.1 immediately recovers the crystal to base;
+- no platform adapter may infer crystal events from enemy removal alone.
 
 ## GameClock
 
@@ -170,6 +207,24 @@ Hero skill behavior is data-driven through optional config fields:
 - `skillBounceDecay`;
 - `skillBonusDamageVsStatusMultiplier`.
 
+## HUD Crystal State
+
+```ts
+export type HudCrystalState = Readonly<{
+  status: CrystalRuntimeStatus;
+  carrierEnemyId?: EntityId;
+  lastCarrierEnemyId?: EntityId;
+  lastDroppedEnemyId?: EntityId;
+  lastEventType?: CrystalEventType;
+  stolenCount: number;
+  droppedCount: number;
+  recoveredCount: number;
+  escapedCount: number;
+}>;
+```
+
+HUD must read this state from `selectHudState`; it must not inspect enemies directly to guess whether the crystal is stolen or recovered.
+
 ## BattleSnapshot
 
 ```ts
@@ -228,7 +283,8 @@ Implemented or active in Demo 0.1 core:
 - GameAction;
 - minimal GameSnapshot;
 - status effects for slow/stun;
-- hero-specific active skill config.
+- hero-specific active skill config;
+- explicit crystal stolen/dropped/recovered/escaped state.
 
 Can defer:
 
@@ -236,14 +292,15 @@ Can defer:
 - replay;
 - projectile runtime;
 - complex buffs;
-- complete statistics.
+- complete statistics;
+- physical dropped-crystal pickup entities.
 
 ## Self Review
 
 Review Result: Pass
 
-Main Issues: Current schema still uses compact runtime names rather than final design names like `heroTowers` and `baseCrystals`.
+Main Issues: Demo 0.1 records dropped-and-recovered in one step instead of spawning a separate pickup entity.
 
-Required Changes: Keep schema serializable and avoid platform-owned skill state.
+Required Changes: Keep crystal feedback state authoritative in `GameState` and expose it through HUD selectors.
 
 Risk Level: Medium

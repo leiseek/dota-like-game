@@ -60,6 +60,7 @@ export type CrystalState = Readonly<{
   status: CrystalRuntimeStatus;
   carrierEnemyId?: EntityId;
   lastCarrierEnemyId?: EntityId;
+  lastDroppedEnemyId?: EntityId;
   lastEvent?: CrystalEvent;
   stolenCount: number;
   droppedCount: number;
@@ -227,6 +228,7 @@ export type HudCrystalState = Readonly<{
   status: CrystalRuntimeStatus;
   carrierEnemyId?: EntityId;
   lastCarrierEnemyId?: EntityId;
+  lastDroppedEnemyId?: EntityId;
   lastEventType?: CrystalEventType;
   stolenCount: number;
   droppedCount: number;

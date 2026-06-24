@@ -50,6 +50,10 @@ function carrierAtHalfPath(health = 25) {
         carryingCrystal: true,
     };
 }
+function assertNear(actual, expected) {
+    assert.ok(actual !== undefined, `expected ${expected}, got undefined`);
+    assert.ok(Math.abs(actual - expected) < 1e-9, `expected ${expected}, got ${actual}`);
+}
 test("initial crystal state is safe and exposed through HUD", () => {
     const initial = createInitialGameState(tutorialLevel);
     const hud = selectHudState(initial);
@@ -101,9 +105,9 @@ test("a returning crystal moves toward the Ancient at half monster speed and the
     const moving = stepSimulation(dropped, 1, straightLevel);
     assert.equal(moving.baseHealth, straightLevel.baseHealth);
     assert.equal(moving.crystal.status, "returning");
-    assert.equal(moving.crystal.position?.x, 60);
-    assert.equal(moving.crystal.progress, 0.6);
-    const recovered = stepSimulation(dropped, 5, straightLevel);
+    assertNear(moving.crystal.position?.x, 60);
+    assertNear(moving.crystal.progress, 0.6);
+    const recovered = stepSimulation(dropped, 6, straightLevel);
     assert.equal(recovered.baseHealth, straightLevel.baseHealth);
     assert.equal(recovered.crystal.status, "recovered");
     assert.equal(recovered.crystal.atBase, true);

@@ -2,7 +2,7 @@
 
 AI Native hero-skill tower-defense project.
 
-Current documentation baseline: `v0.6.0`.
+Current documentation baseline: `v0.7.0`.
 
 ## Project Direction
 
@@ -18,7 +18,7 @@ The repository now contains a platform-neutral TypeScript `game-core` plus a lig
 
 - `src/game-core/`: platform-neutral battle simulation, state, actions, fixed tick, Level 001 config, waves, enemies, hero towers, combat, HUD selector, snapshots, hero-specific active skills, crystal recovery state, and settlement.
 - `platform-web/`: Canvas-based playtest/debug shell that renders `GameState`, dispatches `GameAction`, and stores local Battle Snapshots.
-- `.github/workflows/ci.yml`: checks pull requests and deploys the Web Preview to GitHub Pages on pushes to `main`.
+- `.github/workflows/ci.yml`: checks pull requests, deploys same-repository PR previews, deploys main Web Preview, and cleans closed PR previews.
 - `docs/`: versioned product, architecture, task, review, and handoff documentation.
 
 ## Run Checks
@@ -52,9 +52,21 @@ This creates:
 pages-dist/
 ```
 
-## GitHub Pages Preview
+## GitHub Pages Setup
 
-After GitHub Pages is enabled with source set to GitHub Actions, every push to `main` deploys the Web Preview.
+Use branch-based Pages:
+
+```text
+Settings → Pages → Build and deployment → Source: Deploy from a branch
+Branch: gh-pages
+Folder: / (root)
+```
+
+This supports both a stable main preview and isolated PR preview URLs.
+
+## Main GitHub Pages Preview
+
+Every push to `main` deploys the Web Preview root.
 
 Expected URL:
 
@@ -68,10 +80,26 @@ The root page redirects to:
 https://leiseek.github.io/dota-like-game/platform-web/
 ```
 
-## v0.6.0 Contents
+## PR GitHub Pages Preview
 
-- `.github/workflows/ci.yml`: CI and GitHub Pages deployment workflow
+Same-repository pull requests deploy isolated preview directories.
+
+Expected URL pattern:
+
+```text
+https://leiseek.github.io/dota-like-game/previews/pr-<number>/
+```
+
+The workflow comments the concrete preview URL on the PR after deployment.
+
+When the PR closes, the preview directory is removed from `gh-pages`.
+
+## v0.7.0 Contents
+
+- `.github/workflows/ci.yml`: CI, main Pages deployment, PR Pages preview deployment, and PR preview cleanup workflow
 - `scripts/build-pages.mjs`: GitHub Pages artifact builder
+- `scripts/deploy-pages-branch.mjs`: branch-based Pages deployment helper
+- `scripts/remove-pages-preview.mjs`: PR preview cleanup helper
 - `AGENTS.md`: project-level instructions for Codex / AI coding agents
 - `docs/CODEX_HANDOFF.md`: Codex execution handoff
 - `docs/DOC_VERSION_INDEX.md`: document version index

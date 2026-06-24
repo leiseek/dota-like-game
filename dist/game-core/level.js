@@ -1,3 +1,14 @@
+function passives(archetype, entries) {
+    return entries.map((entry) => ({ ...entry, id: `${archetype}:lv${entry.level}:${entry.kind}` }));
+}
+function progression(archetype, entries) {
+    return {
+        xpPerKill: 1,
+        levelThresholds: [0, 1, 3, 6, 10],
+        cooldownReductionPerLevel: 0.1,
+        passives: passives(archetype, entries),
+    };
+}
 export const tutorialLevel = {
     id: "tutorial-ancient-road",
     fixedDeltaMs: 100,
@@ -48,11 +59,18 @@ export const level001Config = {
             attackIntervalMs: 1150,
             attackRange: 130,
             skillKind: "hook",
-            skillManaCost: 35,
+            skillManaCost: 0,
             skillCooldownMs: 16000,
             skillDamage: 80,
             skillPullDistance: 160,
             skillStunMs: 1000,
+            progression: progression("hook-guardian", [
+                { level: 1, kind: "anti-carrier", label: "Crystal Warden", description: "Deals bonus priority pressure to crystal carriers." },
+                { level: 2, kind: "fissure-block", label: "Stone Line", description: "Hook identity evolves toward Earthshaker-like lane denial." },
+                { level: 3, kind: "stun", label: "Aftershock Guard", description: "Carrier hooks apply stronger control windows." },
+                { level: 4, kind: "aura", label: "Hold the Gate", description: "Nearby allies gain anti-carrier focus." },
+                { level: 5, kind: "fissure-block", label: "Ancient Fissure", description: "Ultimate fantasy: block and split the path in a later milestone." },
+            ]),
         },
         {
             archetype: "frost-priestess",
@@ -62,12 +80,19 @@ export const level001Config = {
             attackIntervalMs: 1000,
             attackRange: 150,
             skillKind: "frost",
-            skillManaCost: 40,
+            skillManaCost: 0,
             skillCooldownMs: 18000,
             skillDamage: 45,
             skillRadius: 90,
             skillSlowMs: 4000,
             skillSlowMultiplier: 0.35,
+            progression: progression("frost-priestess", [
+                { level: 1, kind: "slow", label: "Chill Touch", description: "Basic identity: slows enemies hit by frost effects." },
+                { level: 2, kind: "freeze", label: "Deep Freeze", description: "Future passive: repeated chill can briefly freeze." },
+                { level: 3, kind: "crystal-support", label: "Return Wind", description: "Supports crystal-return situations with control uptime." },
+                { level: 4, kind: "aura", label: "Frozen Field", description: "Creates a local slow-control zone around the hero." },
+                { level: 5, kind: "freeze", label: "Absolute Zero", description: "Ultimate passive fantasy: heavy freeze burst against carriers." },
+            ]),
         },
         {
             archetype: "storm-sigilist",
@@ -77,13 +102,20 @@ export const level001Config = {
             attackIntervalMs: 1400,
             attackRange: 165,
             skillKind: "storm-chain",
-            skillManaCost: 45,
+            skillManaCost: 0,
             skillCooldownMs: 20000,
             skillDamage: 95,
             skillJumpCount: 4,
             skillJumpRadius: 120,
             skillJumpDecay: 0.85,
             skillBonusJumpsVsStatus: 2,
+            progression: progression("storm-sigilist", [
+                { level: 1, kind: "lightning-chain", label: "Static Link", description: "Chain lightning is the core identity." },
+                { level: 2, kind: "slow", label: "Arc Snare", description: "Future passive: lightning briefly slows chained enemies." },
+                { level: 3, kind: "lightning-chain", label: "Overload Jump", description: "Combos with slowed/frozen enemies for extra jumps." },
+                { level: 4, kind: "aura", label: "Storm Field", description: "Nearby chained targets become easier to combo." },
+                { level: 5, kind: "lightning-chain", label: "Thunder Cascade", description: "Ultimate passive fantasy: massive late-chain burst." },
+            ]),
         },
         {
             archetype: "moonblade-ranger",
@@ -93,13 +125,20 @@ export const level001Config = {
             attackIntervalMs: 800,
             attackRange: 155,
             skillKind: "moonblade",
-            skillManaCost: 50,
+            skillManaCost: 0,
             skillCooldownMs: 22000,
             skillDamage: 60,
             skillBounceCount: 2,
             skillBounceDecay: 0.75,
             skillJumpRadius: 140,
             skillBonusDamageVsStatusMultiplier: 1.2,
+            progression: progression("moonblade-ranger", [
+                { level: 1, kind: "cleave", label: "Moon Glaive", description: "Bounce damage identity inspired by glaive-style attacks." },
+                { level: 2, kind: "poison", label: "Night Venom", description: "Future passive: applies toxic damage-over-time." },
+                { level: 3, kind: "burn", label: "Lunar Burn", description: "Future passive: bonus burn against controlled targets." },
+                { level: 4, kind: "cleave", label: "Ricochet Hunt", description: "More bounces and better anti-swarm cleanup." },
+                { level: 5, kind: "anti-carrier", label: "Eclipse Mark", description: "Ultimate passive fantasy: marked carriers take amplified burst." },
+            ]),
         },
     ],
     towerSlots: [

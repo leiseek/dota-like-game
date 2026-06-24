@@ -1,8 +1,10 @@
 const DEFAULT_HERO_SKILL_DAMAGE = 25;
 const DEFAULT_HERO_SKILL_COOLDOWN_TICKS = 10;
-const DEFAULT_HERO_SKILL_MANA_COST = 0;
 const DEFAULT_ENEMY_SPEED_UNITS_PER_SECOND = 75;
 const DEFAULT_CRYSTAL_RETURN_SPEED_MULTIPLIER = 0.5;
+const DEFAULT_LEVEL_THRESHOLDS = [0, 1, 3, 6, 10];
+const DEFAULT_XP_PER_KILL = 1;
+const DEFAULT_COOLDOWN_REDUCTION_PER_LEVEL = 0.1;
 const CRYSTAL_PICKUP_RADIUS = 18;
 const DEFAULT_HOOK_PULL_DISTANCE = 160;
 const DEFAULT_FROST_RADIUS = 90;
@@ -30,11 +32,16 @@ function applyAction(state, action, level) {
         case "BUILD_HERO":
             return buildHero(state, action.slotId, action.heroArchetype, level);
         case "PLACE_HERO":
-            return { ...state, heroes: [...state.heroes, action.hero] };
+            return { ...state, heroes: [...state.heroes, normalizePlacedHero(action.hero, level)] };
         case "SPAWN_ENEMY":
             return { ...state, enemies: [...state.enemies, action.enemy] };
         case "CAST_SKILL":
             return castSkill(state, action.heroId, action.targetEnemyId, level);
+        case "SET_AUTO_CAST":
+            return {
+                ...state,
+                heroes: state.heroes.map((hero) => hero.id === action.heroId ? { ...hero, autoCastEnabled: action.enabled } : hero),
+            };
     }
 }
 function buildHero(state, slotId, heroArchetype, level) {
@@ -42,6 +49,7 @@ function buildHero(state, slotId, heroArchetype, level) {
     const config = level?.heroConfigs?.find((candidate) => candidate.archetype === heroArchetype);
     if (!slot || !config || !slot.unlocked || slot.occupiedByHeroId || state.resources.gold < config.buildCost)
         return state;
+    const heroLevel = getHeroLevel(0, config);
     const hero = {
         id: `hero-${state.heroes.length + 1}`,
         archetype: heroArchetype,
@@ -52,6 +60,10 @@ function buildHero(state, slotId, heroArchetype, level) {
         attackCooldownMs: 0,
         slotId: slot.id,
         totalCost: config.buildCost,
+        level: heroLevel,
+        experience: 0,
+        unlockedPassiveIds: getUnlockedPassiveIds(heroLevel, config),
+        autoCastEnabled: false,
     };
     return {
         ...state,
@@ -60,15 +72,59 @@ function buildHero(state, slotId, heroArchetype, level) {
         towerSlots: state.towerSlots.map((candidate) => candidate.id === slot.id ? { ...candidate, occupiedByHeroId: hero.id } : candidate),
     };
 }
+function normalizePlacedHero(hero, level) {
+    const config = getHeroConfig(level, hero);
+    const experience = hero.experience ?? 0;
+    const heroLevel = hero.level ?? getHeroLevel(experience, config);
+    return {
+        ...hero,
+        level: heroLevel,
+        experience,
+        unlockedPassiveIds: hero.unlockedPassiveIds ?? getUnlockedPassiveIds(heroLevel, config),
+        autoCastEnabled: hero.autoCastEnabled ?? false,
+    };
+}
 function getHeroConfig(level, hero) {
     return level?.heroConfigs?.find((candidate) => candidate.archetype === hero.archetype);
 }
+function getHeroLevel(experience, config) {
+    const thresholds = config?.progression?.levelThresholds ?? DEFAULT_LEVEL_THRESHOLDS;
+    if (experience >= thresholds[4])
+        return 5;
+    if (experience >= thresholds[3])
+        return 4;
+    if (experience >= thresholds[2])
+        return 3;
+    if (experience >= thresholds[1])
+        return 2;
+    return 1;
+}
+function getUnlockedPassiveIds(heroLevel, config) {
+    return config?.progression?.passives.filter((passive) => passive.level <= heroLevel).map((passive) => passive.id) ?? [];
+}
+function gainHeroExperience(hero, experienceToAdd, level) {
+    if (experienceToAdd <= 0)
+        return hero;
+    const config = getHeroConfig(level, hero);
+    const experience = hero.experience + experienceToAdd;
+    const heroLevel = getHeroLevel(experience, config);
+    return {
+        ...hero,
+        experience,
+        level: heroLevel,
+        unlockedPassiveIds: getUnlockedPassiveIds(heroLevel, config),
+    };
+}
+function getXpPerKill(level, hero) {
+    return getHeroConfig(level, hero)?.progression?.xpPerKill ?? DEFAULT_XP_PER_KILL;
+}
 function getSkillCooldownTicks(level, hero, fixedDeltaMs) {
     const config = getHeroConfig(level, hero);
-    return config?.skillCooldownMs === undefined ? DEFAULT_HERO_SKILL_COOLDOWN_TICKS : Math.max(1, Math.ceil(config.skillCooldownMs / fixedDeltaMs));
-}
-function getSkillManaCost(level, hero) {
-    return getHeroConfig(level, hero)?.skillManaCost ?? DEFAULT_HERO_SKILL_MANA_COST;
+    if (config?.skillCooldownMs === undefined)
+        return DEFAULT_HERO_SKILL_COOLDOWN_TICKS;
+    const reductionPerLevel = config.progression?.cooldownReductionPerLevel ?? DEFAULT_COOLDOWN_REDUCTION_PER_LEVEL;
+    const multiplier = Math.max(0.35, 1 - (hero.level - 1) * reductionPerLevel);
+    return Math.max(1, Math.ceil((config.skillCooldownMs * multiplier) / fixedDeltaMs));
 }
 function getSkillDamage(level, hero) {
     return getHeroConfig(level, hero)?.skillDamage ?? DEFAULT_HERO_SKILL_DAMAGE;
@@ -78,17 +134,20 @@ function castSkill(state, heroId, targetEnemyId, level) {
     const target = state.enemies.find((candidate) => candidate.id === targetEnemyId);
     if (!hero || !target || hero.cooldownTicksRemaining > 0)
         return state;
-    const manaCost = getSkillManaCost(level, hero);
-    if (state.resources.manaCrystal < manaCost)
-        return state;
     const result = applySkillEffect(state.enemies, hero, target, level);
     const killedCarrier = result.killedEnemies.find((enemy) => enemy.carryingCrystal);
     const rewardGold = result.killedEnemies.reduce((sum, enemy) => sum + getEnemyRewardGold(level, enemy), 0);
+    const earnedXp = result.killedEnemies.length * getXpPerKill(level, hero);
     return syncSettlementState({
         ...state,
         crystal: killedCarrier ? dropCrystal(state.crystal, killedCarrier, state.clock.tick, level) : state.crystal,
-        resources: { ...state.resources, gold: state.resources.gold + rewardGold, manaCrystal: state.resources.manaCrystal - manaCost },
-        heroes: state.heroes.map((candidate) => candidate.id === heroId ? { ...candidate, cooldownTicksRemaining: getSkillCooldownTicks(level, candidate, state.clock.fixedDeltaMs) } : candidate),
+        resources: { ...state.resources, gold: state.resources.gold + rewardGold },
+        heroes: state.heroes.map((candidate) => {
+            if (candidate.id !== heroId)
+                return candidate;
+            const cooled = { ...candidate, cooldownTicksRemaining: getSkillCooldownTicks(level, candidate, state.clock.fixedDeltaMs) };
+            return gainHeroExperience(cooled, earnedXp, level);
+        }),
         enemies: result.enemies,
         wave: result.killedEnemies.length > 0 && state.wave.isWaveActive
             ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + result.killedEnemies.length }
@@ -345,13 +404,15 @@ function applyTowerCombat(state, level) {
                 killedEnemy = damaged;
             return damaged;
         }).filter((enemy) => enemy.health > 0);
+        let nextHero = { ...cooledHero, attackCooldownMs: config.attackIntervalMs, targetEnemyId: target.id };
         if (killedEnemy) {
             rewardGold += getEnemyRewardGold(level, killedEnemy);
             killedCount += 1;
             if (killedEnemy.carryingCrystal)
                 killedCarrier = killedEnemy;
+            nextHero = gainHeroExperience(nextHero, getXpPerKill(level, nextHero), level);
         }
-        return { ...cooledHero, attackCooldownMs: config.attackIntervalMs, targetEnemyId: target.id };
+        return nextHero;
     });
     return syncSettlementState({
         ...state,
@@ -361,6 +422,19 @@ function applyTowerCombat(state, level) {
         crystal: killedCarrier ? dropCrystal(state.crystal, killedCarrier, state.clock.tick, level) : state.crystal,
         wave: killedCount > 0 && state.wave.isWaveActive ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + killedCount } : state.wave,
     });
+}
+function applyAutoCastSkills(state, level) {
+    let nextState = state;
+    for (const hero of state.heroes) {
+        const currentHero = nextState.heroes.find((candidate) => candidate.id === hero.id);
+        if (!currentHero?.autoCastEnabled || currentHero.cooldownTicksRemaining > 0)
+            continue;
+        const target = selectTarget(currentHero, nextState.enemies, level);
+        if (!target)
+            continue;
+        nextState = castSkill(nextState, currentHero.id, target.id, level);
+    }
+    return nextState;
 }
 function stealCrystal(crystal, enemyId, tick) {
     const { position: _position, pathIndex: _pathIndex, progress: _progress, returnSpeedUnitsPerSecond: _returnSpeedUnitsPerSecond, ...withoutReturn } = crystal;
@@ -518,19 +592,20 @@ function advanceRunningTick(state, level) {
     const waveAdvanced = advanceWave(preparedState, level);
     const movedState = { ...preparedState, enemies: waveAdvanced.enemies.map((enemy) => decayStatusEffects(advanceEnemyAlongPath(enemy, level))), wave: waveAdvanced.wave };
     const combatState = applyTowerCombat(movedState, level);
-    const crystalAdvanced = advanceReturningCrystal(combatState, level);
-    const crystalState = { ...combatState, crystal: crystalAdvanced.crystal, enemies: crystalAdvanced.enemies };
+    const autoCastState = applyAutoCastSkills(combatState, level);
+    const crystalAdvanced = advanceReturningCrystal(autoCastState, level);
+    const crystalState = { ...autoCastState, crystal: crystalAdvanced.crystal, enemies: crystalAdvanced.enemies };
     const resolved = resolveCrystalAndBase(crystalState, crystalState.enemies, level);
-    const completedAllWaves = combatState.wave.totalWaves > 0 && !combatState.wave.isWaveActive && !combatState.wave.isWaitingNextWave && resolved.enemies.length === 0 && resolved.crystal.atBase;
+    const completedAllWaves = autoCastState.wave.totalWaves > 0 && !autoCastState.wave.isWaveActive && !autoCastState.wave.isWaitingNextWave && resolved.enemies.length === 0 && resolved.crystal.atBase;
     const nextState = {
         ...preparedState,
         ...resolved,
         status: completedAllWaves && resolved.status === "running" ? "won" : resolved.status,
-        resources: combatState.resources,
-        wave: combatState.wave,
+        resources: autoCastState.resources,
+        wave: autoCastState.wave,
         clock: { ...state.clock, tick: state.clock.tick + 1 },
-        heroes: combatState.heroes.map((hero) => ({ ...hero, cooldownTicksRemaining: Math.max(0, hero.cooldownTicksRemaining - 1) })),
-        settlement: combatState.settlement,
+        heroes: autoCastState.heroes.map((hero) => ({ ...hero, cooldownTicksRemaining: Math.max(0, hero.cooldownTicksRemaining - 1) })),
+        settlement: autoCastState.settlement,
     };
     return syncSettlementState(nextState);
 }

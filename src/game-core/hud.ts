@@ -48,5 +48,8 @@ function selectHudCrystalState(state: GameState): HudCrystalState {
     ...(state.crystal.lastCarrierEnemyId ? { lastCarrierEnemyId: state.crystal.lastCarrierEnemyId } : {}),
     ...(state.crystal.lastDroppedEnemyId ? { lastDroppedEnemyId: state.crystal.lastDroppedEnemyId } : {}),
     ...(state.crystal.lastEvent ? { lastEventType: state.crystal.lastEvent.type } : {}),
+    ...(state.crystal.position ? { position: state.crystal.position } : {}),
+    ...(state.crystal.pathIndex !== undefined ? { pathIndex: state.crystal.pathIndex } : {}),
+    ...(state.crystal.progress !== undefined ? { progress: state.crystal.progress } : {}),
   };
 }

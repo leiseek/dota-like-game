@@ -107,43 +107,63 @@ test("carrier escape creates a zero-star defeat settlement", () => {
   assert.equal(escaped.settlement.escapedCrystals, 1);
 });
 
-test("base crystal depletion creates a zero-star defeat settlement", () => {
-  const initial = createInitialGameState({ ...tutorialLevel, baseHealth: 1 });
-  const extraEnemy: Enemy = {
-    id: "enemy-2",
-    archetype: "runner",
-    pathIndex: 1,
-    progress: 0.95,
-    position: { x: 9.75, y: 3.8 },
-    health: 50,
-    maxHealth: 50,
-    carryingCrystal: false,
+test("cleared waves do not settle while a dropped crystal is still returning", () => {
+  const returnLevel = {
+    ...tutorialLevel,
+    fixedDeltaMs: 1_000,
+    baseHealth: 10,
+    path: [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+    ],
+    enemies: [{ archetype: "runner", maxHealth: 25, speedUnitsPerSecond: 20, rewardGold: 1 }],
+    waves: [{ id: "wave-01", startsAtMs: 0, spawnGroups: [] }],
   };
-  const depleted = stepSimulation(
-    enqueueAction(
-      {
-        ...initial,
-        status: "running",
-        clock: { ...initial.clock, paused: false },
-        crystal: {
-          ...initial.crystal,
-          atBase: false,
-          status: "carried",
-          carrierEnemyId: "enemy-1",
-          lastCarrierEnemyId: "enemy-1",
-          lastEvent: { type: "stolen", tick: 0, enemyId: "enemy-1" },
-          stolenCount: 1,
-        },
-      },
-      { type: "SPAWN_ENEMY", enemy: extraEnemy },
-    ),
+  const carrier: Enemy = {
+    id: "enemy-1",
+    archetype: "runner",
+    pathIndex: 0,
+    progress: 0.5,
+    position: { x: 50, y: 0 },
+    health: 25,
+    maxHealth: 25,
+    carryingCrystal: true,
+  };
+  const initial = createInitialGameState(returnLevel);
+  const withCarrier = {
+    ...initial,
+    status: "running" as const,
+    clock: { ...initial.clock, paused: false },
+    crystal: {
+      ...initial.crystal,
+      atBase: false,
+      status: "carried" as const,
+      carrierEnemyId: carrier.id,
+      lastCarrierEnemyId: carrier.id,
+      lastEvent: { type: "stolen" as const, tick: 0, enemyId: carrier.id },
+      stolenCount: 1,
+    },
+    enemies: [carrier],
+    wave: {
+      ...initial.wave,
+      totalWaves: 1,
+      isWaveActive: false,
+      isWaitingNextWave: false,
+    },
+  };
+
+  const returning = stepSimulation(
+    enqueueAction(withCarrier, { type: "CAST_SKILL", heroId: "hero-1", targetEnemyId: "enemy-1" }),
     1,
-    tutorialLevel,
+    returnLevel,
   );
 
-  assert.equal(depleted.status, "lost");
-  assert.equal(depleted.settlement.outcome, "defeat");
-  assert.equal(depleted.settlement.reason, "base-crystals-depleted");
-  assert.equal(depleted.settlement.stars, 0);
-  assert.equal(depleted.settlement.remainingCrystals, 0);
+  assert.equal(returning.status, "running");
+  assert.equal(returning.settlement.outcome, "pending");
+  assert.equal(returning.crystal.status, "returning");
+
+  const completed = stepSimulation(returning, 4, returnLevel);
+  assert.equal(completed.status, "won");
+  assert.equal(completed.settlement.outcome, "victory");
+  assert.equal(completed.crystal.status, "recovered");
 });

@@ -1,10 +1,10 @@
 ---
 doc_id: TASK_BOARD
-version: 0.6.1
+version: 0.7.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: branch-based GitHub Pages PR preview deployment clarified
+change_summary: returning crystal and interception loop implemented
 ---
 
 # Task Board
@@ -68,6 +68,8 @@ change_summary: branch-based GitHub Pages PR preview deployment clarified
 | SKILL-002 | hero-specific active skill effects | Engineering + Combat | Done | hook pull/stun, frost area slow, storm chain jumps, ice combo bonus jumps, and moonblade bounce burst covered by regression tests |
 | CRYSTAL-001 | explicit crystal recovery runtime state | Engineering | Done | stolen, dropped, recovered, and escaped crystal states/events are represented in GameState and HUD selector, with regression tests |
 | SETTLEMENT-001 | win/lose/star settlement | Engineering + UX | Done | settlement outcome, reason, stars, remaining crystals, and HUD/Web Preview display covered by regression tests |
+| CRYSTAL-002 | dropped crystal return and re-steal chase mechanics | Engineering + Design | Done | killing a carrier creates a returning crystal, half-speed return, enemy interception/re-steal, delayed recovery, and endpoint wait behavior covered by tests |
+| BUG-CRYSTAL-ENDPOINT-001 | endpoint monsters disappear while crystal unavailable | Engineering | Done | endpoint monsters wait at the Ancient instead of disappearing when the crystal is away from base |
 
 ## Demo 0.1 Readiness Tasks
 
@@ -76,6 +78,7 @@ change_summary: branch-based GitHub Pages PR preview deployment clarified
 | CI-001 | GitHub Actions check workflow | Engineering + QA | Done | PR and main pushes run `npm run check` on Node 22 |
 | PLAYTEST-001 | Web Preview smoke playtest checklist | QA + Design | Done | manual checklist and notes template added in `WEB_PREVIEW_SMOKE_PLAYTEST.md`; actual local/browser run still required |
 | REVIEW-003 | Demo 0.1 Core Self Review | Self Review | Done | conditional pass recorded in `DEMO_01_CORE_SELF_REVIEW.md`; external release not approved yet |
+| VFX-001 | projectile and hit-effect visual events | Platform Web + Engineering | Todo | render readable projectile/HIT effects and support future projectileKey/hitEffectKey customization |
 | POLISH-001 | Web Preview readability polish | Platform Web + UX | Todo | improve visual clarity for skills, crystal carrier, settlement, and 10x gameplay after playtest findings |
 | BALANCE-001 | first numeric balance pass | Combat + QA | Todo | tune waves, costs, mana, cooldowns, and star thresholds after one full playtest run |
 | SNAPSHOT-002 | snapshot validation hardening | Engineering | Todo | validate schema version, level id, and corrupted payloads more explicitly |
@@ -87,14 +90,14 @@ Unless the Project Owner explicitly asks to pause, continue implementing Demo 0.
 
 ## Current Implementation Note
 
-Demo 0.1 P0 core loop is now on `main`. Pages deployment should use `Deploy from a branch` with branch `gh-pages` and folder `/ (root)` so root preview and PR preview folders can coexist. After merging the deployment fix, test the root preview and then open a small PR to validate the `pr-<PR_NUMBER>` preview flow.
+Returning crystal gameplay is now the current core-loop baseline: carrier kills no longer instantly recover crystals, returning crystals can be intercepted, and endpoint monsters no longer disappear silently while the crystal is unavailable. Continue with `VFX-001` projectile/HIT readability next.
 
 ## Self Review
 
 Review Result: Pass
 
-Main Issues: Per-PR preview URLs require branch-based Pages source; official `actions/deploy-pages` PR previews are not publicly available.
+Main Issues: Returning crystal visuals are readable but still placeholder; projectile/HIT effects remain separate work.
 
-Required Changes: Set Pages to `Deploy from a branch`, branch `gh-pages`, root folder after the workflow creates the branch.
+Required Changes: Validate this branch through PR Preview, then continue with `VFX-001`.
 
 Risk Level: Medium

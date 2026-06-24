@@ -1,13 +1,41 @@
 ---
 doc_id: CHANGELOG
-version: 0.6.1
+version: 0.7.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: branch-based Pages PR preview deployment fix recorded
+change_summary: returning crystal and interception loop recorded
 ---
 
 # Changelog
+
+## [0.7.0] - 2026-06-24
+
+### Added
+
+- Added returning crystal runtime state with path position and return speed.
+- Added half-speed crystal return after a carrier is killed.
+- Added enemy interception of returning crystals; intercepting enemies immediately become new carriers and turn back toward the start.
+- Added HUD/Web Preview support for rendering returning crystals on the path.
+- Added regression coverage for drop, return movement, recovery, interception, endpoint waiting, and delayed settlement until a returning crystal is safe.
+
+### Changed
+
+- Carrier death no longer instantly recovers the crystal.
+- Final victory now waits until no crystal is being carried or returning.
+- Monsters reaching the Ancient while the crystal is unavailable now wait at the endpoint instead of silently disappearing.
+- Updated GameState schema and task board to document `CRYSTAL-002`.
+
+### Fixed
+
+- Fixed confusing endpoint behavior where monsters could appear to steal a crystal and vanish when `crystal.atBase === false`.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Returning crystal visuals are placeholder and should be upgraded through `VFX-001`.
+Required Changes: Validate through PR Preview, then continue with projectile/HIT visual events.
+Risk Level: Medium
 
 ## [0.6.1] - 2026-06-24
 

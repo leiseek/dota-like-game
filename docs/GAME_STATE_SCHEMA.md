@@ -1,10 +1,10 @@
 ---
 doc_id: GAME_STATE_SCHEMA
-version: 0.4.3
+version: 0.7.0
 status: active
 owner_agent: Technical Architect Agent
 last_updated: 2026-06-24
-change_summary: battle settlement runtime state added
+change_summary: returning crystal path state added
 ---
 
 # GameState Schema
@@ -21,7 +21,7 @@ It must support:
 - exit-and-resume;
 - cross-platform reuse;
 - active skill effects;
-- explicit crystal theft and recovery feedback;
+- explicit crystal theft, drop, return, re-steal, recovery, and escape feedback;
 - win/lose/star settlement;
 - future replay and multiplayer preparation.
 
@@ -73,12 +73,12 @@ export type ResourceState = Readonly<{
 
 ```ts
 export type CrystalEventType = "stolen" | "dropped" | "recovered" | "escaped";
-export type CrystalRuntimeStatus = "safe" | "carried" | "recovered" | "escaped";
+export type CrystalRuntimeStatus = "safe" | "carried" | "dropped" | "returning" | "recovered" | "escaped";
 
 export type CrystalEvent = Readonly<{
   type: CrystalEventType;
   tick: number;
-  enemyId?: EntityId;
+  enemyId?: EntityId | undefined;
 }>;
 
 export type CrystalState = Readonly<{
@@ -88,6 +88,10 @@ export type CrystalState = Readonly<{
   lastCarrierEnemyId?: EntityId;
   lastDroppedEnemyId?: EntityId;
   lastEvent?: CrystalEvent;
+  position?: Vector2;
+  pathIndex?: number;
+  progress?: number;
+  returnSpeedUnitsPerSecond?: number;
   stolenCount: number;
   droppedCount: number;
   recoveredCount: number;
@@ -97,12 +101,14 @@ export type CrystalState = Readonly<{
 
 Rules:
 
-- `safe`: crystal is at the base and has not recently been recovered from a carrier;
+- `safe`: crystal is at the Ancient and has not recently been contested;
 - `carried`: an enemy is carrying the crystal back toward the start;
-- `recovered`: a carrier was killed and the crystal returned to base;
-- `escaped`: a carrier escaped with the crystal and the battle is lost;
-- `lastEvent` stores the latest crystal feedback event for HUD and platform adapters;
-- `droppedCount` increases when a carrier is killed, even though Demo 0.1 immediately recovers the crystal to base;
+- `dropped` / `returning`: the carrier died and the crystal is moving back toward the Ancient as an independent path object;
+- `recovered`: the returning crystal reached the Ancient;
+- `escaped`: a carrier reached the start with the crystal and the battle is lost;
+- returning crystals move at `returnSpeedUnitsPerSecond`, currently initialized to half the killed carrier archetype speed;
+- monsters can intercept a returning crystal by reaching its position, immediately becoming the new carrier;
+- monsters that reach the Ancient while the crystal is away wait at the endpoint instead of silently disappearing;
 - no platform adapter may infer crystal events from enemy removal alone.
 
 ## SettlementState
@@ -129,7 +135,7 @@ export type SettlementState = Readonly<{
 Settlement rules for Demo 0.1:
 
 - running battles keep `outcome: "pending"`;
-- clearing all waves creates a `victory` settlement;
+- clearing all waves creates a `victory` settlement only when no crystal is being carried or returning;
 - crystal escape creates a `defeat` settlement with reason `crystal-escaped`;
 - base crystal depletion creates a `defeat` settlement with reason `base-crystals-depleted`;
 - defeat always gives 0 stars;
@@ -250,6 +256,9 @@ export type HudCrystalState = Readonly<{
   lastCarrierEnemyId?: EntityId;
   lastDroppedEnemyId?: EntityId;
   lastEventType?: CrystalEventType;
+  position?: Vector2;
+  pathIndex?: number;
+  progress?: number;
   stolenCount: number;
   droppedCount: number;
   recoveredCount: number;
@@ -257,7 +266,7 @@ export type HudCrystalState = Readonly<{
 }>;
 ```
 
-HUD must read crystal and settlement state from `selectHudState`; it must not inspect enemies directly to guess whether the crystal is stolen, recovered, or escaped.
+HUD must read crystal and settlement state from `selectHudState`; it must not inspect enemies directly to guess whether the crystal is stolen, returning, recovered, or escaped.
 
 ## BattleSnapshot
 
@@ -318,7 +327,7 @@ Implemented or active in Demo 0.1 core:
 - minimal GameSnapshot;
 - status effects for slow/stun;
 - hero-specific active skill config;
-- explicit crystal stolen/dropped/recovered/escaped state;
+- explicit crystal stolen/dropped/returning/recovered/escaped state;
 - win/lose/star settlement state.
 
 Can defer:
@@ -328,14 +337,14 @@ Can defer:
 - projectile runtime;
 - complex buffs;
 - complete statistics;
-- physical dropped-crystal pickup entities.
+- physical multi-crystal inventory entities.
 
 ## Self Review
 
 Review Result: Pass
 
-Main Issues: Star thresholds are MVP-simple and need playtest tuning after Web Preview runs.
+Main Issues: Returning crystal state is now authoritative, but visuals are still placeholder and should be improved through VFX-001.
 
-Required Changes: Keep settlement state authoritative in `GameState` and expose it through HUD selectors.
+Required Changes: Keep returning crystal mechanics in `GameState` and expose it through HUD selectors.
 
 Risk Level: Medium

@@ -236,6 +236,10 @@ function crystalStatusLabel(status: GameState["crystal"]["status"]): string {
       return "safe";
     case "carried":
       return "stolen";
+    case "dropped":
+      return "dropped";
+    case "returning":
+      return "returning";
     case "recovered":
       return "recovered";
     case "escaped":
@@ -262,6 +266,7 @@ function render(): void {
   drawTowerSlots();
   drawHeroes();
   drawEnemies();
+  drawReturningCrystal();
   drawOverlayText();
   drawSettlementPanel();
 }
@@ -388,6 +393,30 @@ function drawEnemies(): void {
       context.fill();
     }
   }
+}
+
+function drawReturningCrystal(): void {
+  const crystal = gameState.crystal;
+  if ((crystal.status !== "returning" && crystal.status !== "dropped") || !crystal.position) return;
+
+  context.save();
+  context.strokeStyle = "rgba(255, 226, 138, 0.45)";
+  context.lineWidth = 2;
+  context.beginPath();
+  context.arc(crystal.position.x, crystal.position.y, 18, 0, Math.PI * 2);
+  context.stroke();
+
+  context.fillStyle = "#ffe28a";
+  context.beginPath();
+  context.moveTo(crystal.position.x, crystal.position.y - 15);
+  context.lineTo(crystal.position.x + 10, crystal.position.y);
+  context.lineTo(crystal.position.x, crystal.position.y + 15);
+  context.lineTo(crystal.position.x - 10, crystal.position.y);
+  context.closePath();
+  context.fill();
+
+  drawLabel({ x: crystal.position.x, y: crystal.position.y - 24 }, "RETURN", "#ffe28a");
+  context.restore();
 }
 
 function drawOverlayText(): void {

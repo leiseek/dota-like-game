@@ -1,10 +1,10 @@
 ---
 doc_id: DOC_VERSION_INDEX
-version: 0.4.3
+version: 0.5.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: v0.4.3 win/lose/star settlement documentation updates
+change_summary: v0.5.0 Demo 0.1 readiness review documentation updates
 ---
 
 # Document Version Index
@@ -19,6 +19,7 @@ change_summary: v0.4.3 win/lose/star settlement documentation updates
 | SELF_REVIEW_PROCESS.md | 0.1.0 | active | Self Review Agent | Self Review Gate process |
 | PHASE_0_SELF_REVIEW.md | 0.2.0 | active | Self Review Agent | Phase 0 review result |
 | PHASE_1_TECHNICAL_REVIEW.md | 0.1.0 | active | Self Review Agent | Phase 1 game-core technical review |
+| DEMO_01_CORE_SELF_REVIEW.md | 0.5.0 | active | Self Review Agent | Demo 0.1 core readiness conditional pass |
 | PLATFORM_STRATEGY.md | 0.1.0 | active | Platform Strategy Agent | HarmonyOS + WeChat Mini Game strategy |
 | TECH_ARCHITECTURE.md | 0.4.0 | active | Technical Architect Agent | current core-first architecture with Web Preview adapter |
 | GAME_STATE_SCHEMA.md | 0.4.3 | active | Technical Architect Agent | battle settlement runtime state added |
@@ -26,10 +27,11 @@ change_summary: v0.4.3 win/lose/star settlement documentation updates
 | HERO_DESIGN.md | 0.2.0 | active | Combat Designer Agent | first hero set |
 | UI_UX_SPEC.md | 0.4.3 | active | UX/UI Agent | settlement result display added |
 | WEB_PREVIEW_SPEC.md | 0.1.0 | active | Platform Web Agent | Web Playtest Preview shell |
+| WEB_PREVIEW_SMOKE_PLAYTEST.md | 0.5.0 | active | QA Agent | Web Preview smoke playtest checklist |
 | ROADMAP.md | 0.1.0 | active | Executive Producer Agent | phase roadmap |
-| TASK_BOARD.md | 0.4.3 | active | Team Leader Agent | SETTLEMENT-001 complete; PLAYTEST-001 next |
+| TASK_BOARD.md | 0.5.0 | active | Team Leader Agent | readiness checklist and review complete; polish/balance next |
 | DECISIONS.md | 0.4.0 | active | Team Leader Agent | ADR-0006 added |
-| CHANGELOG.md | 0.4.3 | active | Team Leader Agent | Win/lose/star settlement recorded |
+| CHANGELOG.md | 0.5.0 | active | Team Leader Agent | Demo 0.1 readiness review recorded |
 
 ## Status Definitions
 

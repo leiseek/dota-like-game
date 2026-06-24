@@ -68,6 +68,25 @@ export type CrystalState = Readonly<{
   escapedCount: number;
 }>;
 
+export type SettlementOutcome = "pending" | "victory" | "defeat";
+
+export type SettlementReason = "none" | "all-waves-cleared" | "crystal-escaped" | "base-crystals-depleted";
+
+export type StarRating = 0 | 1 | 2 | 3;
+
+export type SettlementState = Readonly<{
+  outcome: SettlementOutcome;
+  reason: SettlementReason;
+  isComplete: boolean;
+  stars: StarRating;
+  remainingCrystals: number;
+  maxCrystals: number;
+  recoveredCrystals: number;
+  stolenCrystals: number;
+  escapedCrystals: number;
+  completedAtTick?: number;
+}>;
+
 export type GameClock = Readonly<{
   tick: number;
   fixedDeltaMs: number;
@@ -180,6 +199,7 @@ export type GameState = Readonly<{
   maxBaseHealth: number;
   resources: ResourceState;
   crystal: CrystalState;
+  settlement: SettlementState;
   heroes: readonly Hero[];
   enemies: readonly Enemy[];
   pendingActions: readonly GameAction[];
@@ -245,6 +265,7 @@ export type HudState = Readonly<{
   crystals: number;
   maxCrystals: number;
   crystal: HudCrystalState;
+  settlement: SettlementState;
   gold: number;
   manaCrystal: number;
   wave: HudWaveState;

@@ -1,10 +1,10 @@
 ---
 doc_id: GAME_STATE_SCHEMA
-version: 0.4.2
+version: 0.4.3
 status: active
 owner_agent: Technical Architect Agent
 last_updated: 2026-06-24
-change_summary: explicit crystal recovery runtime state added
+change_summary: battle settlement runtime state added
 ---
 
 # GameState Schema
@@ -22,6 +22,7 @@ It must support:
 - cross-platform reuse;
 - active skill effects;
 - explicit crystal theft and recovery feedback;
+- win/lose/star settlement;
 - future replay and multiplayer preparation.
 
 ## Current Runtime Shape
@@ -40,6 +41,7 @@ export type GameState = Readonly<{
   maxBaseHealth: number;
   resources: ResourceState;
   crystal: CrystalState;
+  settlement: SettlementState;
   heroes: readonly Hero[];
   enemies: readonly Enemy[];
   pendingActions: readonly GameAction[];
@@ -102,6 +104,38 @@ Rules:
 - `lastEvent` stores the latest crystal feedback event for HUD and platform adapters;
 - `droppedCount` increases when a carrier is killed, even though Demo 0.1 immediately recovers the crystal to base;
 - no platform adapter may infer crystal events from enemy removal alone.
+
+## SettlementState
+
+```ts
+export type SettlementOutcome = "pending" | "victory" | "defeat";
+export type SettlementReason = "none" | "all-waves-cleared" | "crystal-escaped" | "base-crystals-depleted";
+export type StarRating = 0 | 1 | 2 | 3;
+
+export type SettlementState = Readonly<{
+  outcome: SettlementOutcome;
+  reason: SettlementReason;
+  isComplete: boolean;
+  stars: StarRating;
+  remainingCrystals: number;
+  maxCrystals: number;
+  recoveredCrystals: number;
+  stolenCrystals: number;
+  escapedCrystals: number;
+  completedAtTick?: number;
+}>;
+```
+
+Settlement rules for Demo 0.1:
+
+- running battles keep `outcome: "pending"`;
+- clearing all waves creates a `victory` settlement;
+- crystal escape creates a `defeat` settlement with reason `crystal-escaped`;
+- base crystal depletion creates a `defeat` settlement with reason `base-crystals-depleted`;
+- defeat always gives 0 stars;
+- victory gives 3 stars when all crystals remain;
+- victory gives 2 stars when at least 50% of crystals remain;
+- victory gives 1 star when at least 1 crystal remains.
 
 ## GameClock
 
@@ -207,7 +241,7 @@ Hero skill behavior is data-driven through optional config fields:
 - `skillBounceDecay`;
 - `skillBonusDamageVsStatusMultiplier`.
 
-## HUD Crystal State
+## HUD Crystal and Settlement State
 
 ```ts
 export type HudCrystalState = Readonly<{
@@ -223,7 +257,7 @@ export type HudCrystalState = Readonly<{
 }>;
 ```
 
-HUD must read this state from `selectHudState`; it must not inspect enemies directly to guess whether the crystal is stolen or recovered.
+HUD must read crystal and settlement state from `selectHudState`; it must not inspect enemies directly to guess whether the crystal is stolen, recovered, or escaped.
 
 ## BattleSnapshot
 
@@ -284,7 +318,8 @@ Implemented or active in Demo 0.1 core:
 - minimal GameSnapshot;
 - status effects for slow/stun;
 - hero-specific active skill config;
-- explicit crystal stolen/dropped/recovered/escaped state.
+- explicit crystal stolen/dropped/recovered/escaped state;
+- win/lose/star settlement state.
 
 Can defer:
 
@@ -299,8 +334,8 @@ Can defer:
 
 Review Result: Pass
 
-Main Issues: Demo 0.1 records dropped-and-recovered in one step instead of spawning a separate pickup entity.
+Main Issues: Star thresholds are MVP-simple and need playtest tuning after Web Preview runs.
 
-Required Changes: Keep crystal feedback state authoritative in `GameState` and expose it through HUD selectors.
+Required Changes: Keep settlement state authoritative in `GameState` and expose it through HUD selectors.
 
 Risk Level: Medium

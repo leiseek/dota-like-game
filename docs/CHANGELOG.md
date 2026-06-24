@@ -1,13 +1,37 @@
 ---
 doc_id: CHANGELOG
-version: 0.4.2
+version: 0.4.3
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: explicit crystal recovery runtime state recorded
+change_summary: win/lose/star settlement recorded
 ---
 
 # Changelog
+
+## [0.4.3] - 2026-06-24
+
+### Added
+
+- Added `SettlementState` with outcome, reason, completion flag, star rating, remaining crystals, max crystals, recovered crystals, stolen crystals, escaped crystals, and completion tick.
+- Added Demo 0.1 star rules: 3 stars for all crystals, 2 stars for at least 50%, 1 star for at least one crystal, and 0 stars for defeat.
+- Added settlement finalization for all-waves-cleared victory, crystal-escaped defeat, and base-crystals-depleted defeat.
+- Added settlement exposure through the platform-neutral HUD selector.
+- Added Web Preview settlement overlay with outcome, stars, reason, and remaining crystals.
+- Added regression coverage for pending settlement, 3-star victory, 2-star victory, 1-star victory, crystal-escaped defeat, and base-crystals-depleted defeat.
+
+### Changed
+
+- Updated GameState schema documentation for settlement runtime state.
+- Updated UI/UX spec with settlement display requirements.
+- Marked `SETTLEMENT-001` complete and moved next work to Web Preview smoke playtest and Demo 0.1 core self review.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Star thresholds are MVP-simple and need playtest tuning after Web Preview validation.
+Required Changes: Run the PR stack locally, validate Web Preview readability, and perform Demo 0.1 Core Self Review.
+Risk Level: Medium
 
 ## [0.4.2] - 2026-06-24
 

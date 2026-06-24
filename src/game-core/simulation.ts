@@ -6,6 +6,9 @@ import type {
   Hero,
   HeroConfig,
   LevelConfig,
+  SettlementReason,
+  SettlementState,
+  StarRating,
   StatusEffectState,
   Vector2,
   WaveRuntimeState,
@@ -126,7 +129,7 @@ function castSkill(state: GameState, heroId: string, targetEnemyId: string, leve
   const killedCarrier = result.killedEnemies.find((enemy) => enemy.carryingCrystal);
   const rewardGold = result.killedEnemies.reduce((sum, enemy) => sum + getEnemyRewardGold(level, enemy), 0);
 
-  return {
+  return syncSettlementState({
     ...state,
     crystal: killedCarrier ? recoverCrystal(state.crystal, killedCarrier.id, state.clock.tick) : state.crystal,
     resources: {
@@ -143,7 +146,7 @@ function castSkill(state: GameState, heroId: string, targetEnemyId: string, leve
     wave: result.killedEnemies.length > 0 && state.wave.isWaveActive
       ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + result.killedEnemies.length }
       : state.wave,
-  };
+  });
 }
 
 function applySkillEffect(enemies: readonly Enemy[], hero: Hero, target: Enemy, level?: LevelConfig): SkillApplicationResult {
@@ -515,7 +518,7 @@ function applyTowerCombat(state: GameState, level?: LevelConfig): GameState {
     return { ...cooledHero, attackCooldownMs: config.attackIntervalMs, targetEnemyId: target.id };
   });
 
-  return {
+  return syncSettlementState({
     ...state,
     heroes,
     enemies,
@@ -527,7 +530,7 @@ function applyTowerCombat(state: GameState, level?: LevelConfig): GameState {
     wave: killedCount > 0 && state.wave.isWaveActive
       ? { ...state.wave, killedCountInWave: state.wave.killedCountInWave + killedCount }
       : state.wave,
-  };
+  });
 }
 
 function stealCrystal(crystal: CrystalState, enemyId: string, tick: number): CrystalState {
@@ -720,10 +723,11 @@ function advanceRunningTick(state: GameState, level?: LevelConfig): GameState {
     !waveAdvanced.wave.isWaitingNextWave &&
     resolved.enemies.length === 0;
 
-  return {
+  const nextStatus = completedAllWaves && resolved.status === "running" ? "won" : resolved.status;
+  const nextState: GameState = {
     ...preparedState,
     ...resolved,
-    status: completedAllWaves && resolved.status === "running" ? "won" : resolved.status,
+    status: nextStatus,
     resources: combatState.resources,
     wave: combatState.wave,
     clock: { ...state.clock, tick: state.clock.tick + 1 },
@@ -731,12 +735,54 @@ function advanceRunningTick(state: GameState, level?: LevelConfig): GameState {
       ...hero,
       cooldownTicksRemaining: Math.max(0, hero.cooldownTicksRemaining - 1),
     })),
+    settlement: combatState.settlement,
   };
+
+  return syncSettlementState(nextState);
+}
+
+function calculateStars(remainingCrystals: number, maxCrystals: number): StarRating {
+  if (maxCrystals <= 0 || remainingCrystals <= 0) return 0;
+  if (remainingCrystals === maxCrystals) return 3;
+  if (remainingCrystals / maxCrystals >= 0.5) return 2;
+  return 1;
+}
+
+function getSettlementReason(state: GameState): SettlementReason {
+  if (state.status === "won") return "all-waves-cleared";
+  if (state.crystal.status === "escaped") return "crystal-escaped";
+  if (state.baseHealth <= 0) return "base-crystals-depleted";
+  return "none";
+}
+
+function createSettlementState(state: GameState): SettlementState {
+  const isVictory = state.status === "won";
+  const isDefeat = state.status === "lost";
+  const isComplete = isVictory || isDefeat;
+  const stars = isVictory ? calculateStars(state.baseHealth, state.maxBaseHealth) : 0;
+
+  return {
+    outcome: isVictory ? "victory" : isDefeat ? "defeat" : "pending",
+    reason: getSettlementReason(state),
+    isComplete,
+    stars,
+    remainingCrystals: state.baseHealth,
+    maxCrystals: state.maxBaseHealth,
+    recoveredCrystals: state.crystal.recoveredCount,
+    stolenCrystals: state.crystal.stolenCount,
+    escapedCrystals: state.crystal.escapedCount,
+    ...(isComplete ? { completedAtTick: state.clock.tick } : {}),
+  };
+}
+
+function syncSettlementState(state: GameState): GameState {
+  if (state.settlement.isComplete) return state;
+  return { ...state, settlement: createSettlementState(state) };
 }
 
 export function reduceActions(state: GameState, level?: LevelConfig): GameState {
   const reduced = state.pendingActions.reduce((nextState, action) => applyAction(nextState, action, level), state);
-  return { ...reduced, pendingActions: [] };
+  return syncSettlementState({ ...reduced, pendingActions: [] });
 }
 
 export function stepFixedTick(state: GameState, level?: LevelConfig): GameState {

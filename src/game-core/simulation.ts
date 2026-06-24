@@ -130,7 +130,9 @@ function castSkill(state: GameState, heroId: string, targetEnemyId: string, leve
 
 function applySkillEffect(enemies: readonly Enemy[], hero: Hero, target: Enemy, level?: LevelConfig): SkillApplicationResult {
   const config = getHeroConfig(level, hero);
-  switch (config?.skillKind ?? "direct-damage") {
+  if (!config) return applyDirectDamageSkill(enemies, hero, target, level);
+
+  switch (config.skillKind ?? "direct-damage") {
     case "hook":
       return applyHookSkill(enemies, hero, target, level, config);
     case "frost":
@@ -483,7 +485,7 @@ function resolveCrystalAndBase(state: GameState, advancedEnemies: readonly Enemy
 
     if (!enemy.returningToStart && !enemy.carryingCrystal && enemy.progress >= 1 && enemy.pathIndex === lastPathSegmentIndex) {
       if (crystal.atBase) {
-        const carrier = { ...enemy, progress: 1, carryingCrystal: true, returningToStart: true, ...(ancientPosition ? { position: ancientPosition } : {}) };
+        const carrier: Enemy = { ...enemy, progress: 1, carryingCrystal: true, returningToStart: true, ...(ancientPosition ? { position: ancientPosition } : {}) };
         crystal = stealCrystal(crystal, carrier.id, state.clock.tick);
         enemies.push(carrier);
       } else {

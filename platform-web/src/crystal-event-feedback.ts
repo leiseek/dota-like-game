@@ -1,8 +1,14 @@
 const CRYSTAL_EVENT_DURATION_MS = 1500;
-const CRYSTAL_HUD_ID = "hud-crystals";
+const VISUAL_EVENT_NAME = "ancient-defense:visual-event";
 
-type CrystalHudStatus = "unknown" | "safe" | "carried" | "dropped" | "returning" | "recovered" | "escaped";
 type CrystalEventTone = "danger" | "warning" | "success";
+
+type CrystalObjectiveVisualEvent = Readonly<{
+  type: "crystal-event";
+  title: string;
+  subtitle: string;
+  tone: CrystalEventTone;
+}>;
 
 type CrystalEventEffect = Readonly<{
   title: string;
@@ -11,84 +17,23 @@ type CrystalEventEffect = Readonly<{
   startedAtMs: number;
 }>;
 
-let previousStatus: CrystalHudStatus = "unknown";
 let crystalEventEffects: CrystalEventEffect[] = [];
 
-const hudElement = document.getElementById(CRYSTAL_HUD_ID);
-if (hudElement) {
-  previousStatus = parseCrystalHudStatus(hudElement.textContent ?? "");
-  new MutationObserver(() => observeCrystalStatus(hudElement)).observe(hudElement, {
-    childList: true,
-    characterData: true,
-    subtree: true,
-  });
-}
+window.addEventListener(VISUAL_EVENT_NAME, (event) => {
+  const detail = (event as CustomEvent<CrystalObjectiveVisualEvent>).detail;
+  if (detail.type !== "crystal-event") return;
+  crystalEventEffects = [
+    ...crystalEventEffects,
+    {
+      title: detail.title,
+      subtitle: detail.subtitle,
+      tone: detail.tone,
+      startedAtMs: performance.now(),
+    },
+  ].slice(-4);
+});
 
 requestAnimationFrame(drawCrystalEventEffects);
-
-function observeCrystalStatus(element: HTMLElement): void {
-  const nextStatus = parseCrystalHudStatus(element.textContent ?? "");
-  if (nextStatus === "unknown" || nextStatus === previousStatus) return;
-
-  const effect = createCrystalEventEffect(previousStatus, nextStatus);
-  previousStatus = nextStatus;
-  if (!effect) return;
-
-  crystalEventEffects = [...crystalEventEffects, effect].slice(-4);
-}
-
-function parseCrystalHudStatus(text: string): CrystalHudStatus {
-  if (text.includes("被携带")) return "carried";
-  if (text.includes("掉落")) return "dropped";
-  if (text.includes("返回中")) return "returning";
-  if (text.includes("已回收")) return "recovered";
-  if (text.includes("已被运出")) return "escaped";
-  if (text.includes("安全")) return "safe";
-  return "unknown";
-}
-
-function createCrystalEventEffect(previous: CrystalHudStatus, next: CrystalHudStatus): CrystalEventEffect | undefined {
-  const startedAtMs = performance.now();
-  if (next === "carried") {
-    const intercepted = previous === "returning" || previous === "dropped";
-    return {
-      title: intercepted ? "水晶被截走！" : "水晶被偷走！",
-      subtitle: intercepted ? "返还途中被怪物追上，携晶者正在逃向起点。" : "怪物已从圣坛拿到水晶，必须拦截返程路线。",
-      tone: "danger",
-      startedAtMs,
-    };
-  }
-
-  if (next === "returning" || next === "dropped") {
-    return {
-      title: "水晶掉落，正在返还！",
-      subtitle: "水晶会以半速返回圣坛，途中仍可能被其他怪物截走。",
-      tone: "warning",
-      startedAtMs,
-    };
-  }
-
-  if (next === "recovered" || next === "safe") {
-    if (previous !== "returning" && previous !== "dropped") return undefined;
-    return {
-      title: "水晶已返还！",
-      subtitle: "圣坛重新安全，可以继续防守下一次偷取。",
-      tone: "success",
-      startedAtMs,
-    };
-  }
-
-  if (next === "escaped") {
-    return {
-      title: "水晶被运出起点！",
-      subtitle: "只有怪物真正从起点离场时才扣除水晶。",
-      tone: "danger",
-      startedAtMs,
-    };
-  }
-
-  return undefined;
-}
 
 function drawCrystalEventEffects(nowMs: number): void {
   const canvas = document.getElementById("battle-canvas") as HTMLCanvasElement | null;
@@ -185,3 +130,5 @@ function roundRect(context: CanvasRenderingContext2D, x: number, y: number, widt
   context.quadraticCurveTo(x, y, x + radius, y);
   context.closePath();
 }
+
+export {};

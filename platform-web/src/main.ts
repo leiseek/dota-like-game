@@ -25,6 +25,7 @@ const DEFAULT_HERO_ARCHETYPE = "hook-guardian";
 const FLOATING_TEXT_DURATION_MS = 900;
 const PROJECTILE_DURATION_MS = 260;
 const HIT_EFFECT_DURATION_MS = 340;
+const OBSTACLE_CLEAR_EFFECT_DURATION_MS = 720;
 
 const HERO_OPTIONS = [
   DEFAULT_HERO_ARCHETYPE,
@@ -64,7 +65,15 @@ type HitEffect = {
   durationMs: number;
 };
 
-type CombatEffect = ProjectileEffect | HitEffect;
+type ObstacleClearEffect = {
+  type: "obstacle-clear";
+  position: Vector2;
+  unlockSlotId?: string;
+  ageMs: number;
+  durationMs: number;
+};
+
+type CombatEffect = ProjectileEffect | HitEffect | ObstacleClearEffect;
 
 const COMBAT_VFX: Record<CombatVfxStyle, { projectile: string; glow: string; hit: string; radius: number; lineWidth: number }> = {
   basic: { projectile: "#fff1a8", glow: "rgba(255, 241, 168, 0.2)", hit: "rgba(255, 241, 168, 0.8)", radius: 9, lineWidth: 2 },
@@ -214,6 +223,11 @@ function addHitEffect(position: Vector2, style: CombatVfxStyle): void {
   combatEffects = [...combatEffects, effect].slice(-48);
 }
 
+function addObstacleClearEffect(position: Vector2, unlockSlotId?: string): void {
+  const effect: ObstacleClearEffect = { type: "obstacle-clear", position, unlockSlotId, ageMs: 0, durationMs: OBSTACLE_CLEAR_EFFECT_DURATION_MS };
+  combatEffects = [...combatEffects, effect].slice(-48);
+}
+
 function addFloatingText(text: string, position: Vector2): void {
   floatingTexts = [
     ...floatingTexts,
@@ -234,10 +248,7 @@ function updateFloatingTexts(deltaMs: number): void {
 
 function updateCombatEffects(deltaMs: number): void {
   combatEffects = combatEffects
-    .map((effect): CombatEffect => {
-      if (effect.type === "projectile") return { ...effect, ageMs: effect.ageMs + deltaMs };
-      return { ...effect, ageMs: effect.ageMs + deltaMs };
-    })
+    .map((effect): CombatEffect => ({ ...effect, ageMs: effect.ageMs + deltaMs }))
     .filter((effect) => effect.ageMs < effect.durationMs);
 }
 
@@ -322,12 +333,16 @@ function handleCanvasClick(event: MouseEvent): void {
 function clearClickedObstacle(obstacle: ObstacleState): void {
   if (gameState.resources.gold < obstacle.clearCost) {
     setMessage(`金币不足：清理 ${obstacle.id} 需要 ${obstacle.clearCost} 金币。`);
+    addFloatingText("金币不足", obstacle.position);
     return;
   }
 
   dispatch({ type: "CLEAR_OBSTACLE", obstacleId: obstacle.id });
   const nextObstacle = gameState.obstacles.find((candidate) => candidate.id === obstacle.id);
   if (nextObstacle?.destroyed) {
+    addObstacleClearEffect(obstacle.position, obstacle.unlocksSlotId);
+    addFloatingText(`-${obstacle.clearCost} 金币`, obstacle.position);
+    if (obstacle.unlocksSlotId) addFloatingText(`解锁 ${obstacle.unlocksSlotId}`, { x: obstacle.position.x, y: obstacle.position.y + 18 });
     const unlockText = obstacle.unlocksSlotId ? `，已解锁塔位 ${obstacle.unlocksSlotId}` : "";
     setMessage(`已清理障碍 ${obstacle.id}${unlockText}。`);
   } else {
@@ -678,7 +693,8 @@ function drawReturningCrystal(): void {
 function drawCombatEffects(): void {
   for (const effect of combatEffects) {
     if (effect.type === "projectile") drawProjectileEffect(effect);
-    else drawHitEffect(effect);
+    else if (effect.type === "hit") drawHitEffect(effect);
+    else drawObstacleClearEffect(effect);
   }
 }
 
@@ -754,6 +770,36 @@ function drawHitEffect(effect: HitEffect): void {
     context.stroke();
   }
 
+  context.restore();
+}
+
+function drawObstacleClearEffect(effect: ObstacleClearEffect): void {
+  const ratio = Math.min(1, effect.ageMs / effect.durationMs);
+  const radius = 18 + ratio * 34;
+
+  context.save();
+  context.globalAlpha = Math.max(0, 1 - ratio);
+  context.strokeStyle = "rgba(255, 214, 138, 0.85)";
+  context.lineWidth = 3;
+  context.beginPath();
+  context.arc(effect.position.x, effect.position.y, radius, 0, Math.PI * 2);
+  context.stroke();
+
+  context.strokeStyle = "rgba(255, 255, 255, 0.72)";
+  context.lineWidth = 2;
+  for (let index = 0; index < 8; index += 1) {
+    const angle = (Math.PI * 2 * index) / 8;
+    const inner = 10 + ratio * 12;
+    const outer = 18 + ratio * 42;
+    context.beginPath();
+    context.moveTo(effect.position.x + Math.cos(angle) * inner, effect.position.y + Math.sin(angle) * inner);
+    context.lineTo(effect.position.x + Math.cos(angle) * outer, effect.position.y + Math.sin(angle) * outer);
+    context.stroke();
+  }
+
+  if (effect.unlockSlotId) {
+    drawLabel({ x: effect.position.x, y: effect.position.y - 34 - ratio * 12 }, `解锁 ${effect.unlockSlotId}`, "#6effa2");
+  }
   context.restore();
 }
 

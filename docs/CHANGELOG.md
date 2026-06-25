@@ -1,13 +1,27 @@
 ---
 doc_id: CHANGELOG
-version: 0.7.1
+version: 0.7.2
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: Level 001 opening economy tuned for passive combo play
+change_summary: Web Preview status legend added
 ---
 
 # Changelog
+
+## [0.7.2] - 2026-06-24
+
+### Added
+
+- Added a Chinese Web Preview status legend for slow, stun/freeze, poison, burn, and crystal-carrier rules.
+- Styled the status legend as a compact right-panel reference card so playtesters can understand passive effects without reading code or docs.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Canvas enemy labels still only prioritize one status at a time; richer per-enemy icon stacks should follow in a dedicated Web rendering slice.
+Required Changes: Validate through PR Preview and continue with in-Canvas status rendering polish.
+Risk Level: Low
 
 ## [0.7.1] - 2026-06-24
 

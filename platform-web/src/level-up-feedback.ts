@@ -1,5 +1,17 @@
 const LEVEL_UP_EFFECT_DURATION_MS = 1200;
-const HERO_LABEL_PATTERN = /^Lv([1-5])\s+([A-Z]+)/;
+const VISUAL_EVENT_NAME = "ancient-defense:visual-event";
+
+type HeroLevelUpVisualEvent = Readonly<{
+  type: "hero-level-up";
+  x: number;
+  y: number;
+  level: number;
+  heroAbbreviation: string;
+  passiveLabel: string;
+}>;
+
+type OtherVisualEvent = Readonly<{ type: string }>;
+type WebVisualEvent = HeroLevelUpVisualEvent | OtherVisualEvent;
 
 type LevelUpEffect = Readonly<{
   x: number;
@@ -10,62 +22,25 @@ type LevelUpEffect = Readonly<{
   startedAtMs: number;
 }>;
 
-const passiveLabelsByHeroAbbreviation: Record<string, readonly string[]> = {
-  HG: ["Crystal Warden", "Stone Line", "Aftershock Guard", "Hold the Gate", "Ancient Fissure"],
-  FP: ["Chill Touch", "Deep Freeze", "Return Wind", "Frozen Field", "Absolute Zero"],
-  SS: ["Static Link", "Arc Snare", "Overload Jump", "Storm Field", "Thunder Cascade"],
-  MR: ["Moon Glaive", "Night Venom", "Lunar Burn", "Ricochet Hunt", "Eclipse Mark"],
-  G: ["基础守卫成长"],
-};
-
-const seenHeroLevels = new Map<string, number>();
 let levelUpEffects: LevelUpEffect[] = [];
 
-installHeroLabelObserver();
-requestAnimationFrame(drawLevelUpEffects);
-
-function installHeroLabelObserver(): void {
-  const originalFillText = CanvasRenderingContext2D.prototype.fillText;
-
-  CanvasRenderingContext2D.prototype.fillText = function patchedFillText(
-    this: CanvasRenderingContext2D,
-    text: string,
-    x: number,
-    y: number,
-    maxWidth?: number,
-  ): void {
-    observeHeroLevelText(this, text, x, y);
-    if (maxWidth === undefined) originalFillText.call(this, text, x, y);
-    else originalFillText.call(this, text, x, y, maxWidth);
-  };
-}
-
-function observeHeroLevelText(context: CanvasRenderingContext2D, text: string, x: number, y: number): void {
-  if (context.canvas.id !== "battle-canvas") return;
-  const match = HERO_LABEL_PATTERN.exec(text);
-  if (!match) return;
-
-  const level = Number(match[1]);
-  const heroAbbreviation = match[2] ?? "?";
-  const heroKey = `${heroAbbreviation}:${Math.round(x)}:${Math.round(y)}`;
-  const previousLevel = seenHeroLevels.get(heroKey);
-  seenHeroLevels.set(heroKey, Math.max(previousLevel ?? level, level));
-
-  if (previousLevel === undefined || level <= previousLevel) return;
-
-  const passiveLabel = passiveLabelsByHeroAbbreviation[heroAbbreviation]?.[level - 1] ?? "新被动";
+window.addEventListener(VISUAL_EVENT_NAME, (event) => {
+  const detail = (event as CustomEvent<WebVisualEvent>).detail;
+  if (detail.type !== "hero-level-up") return;
   levelUpEffects = [
     ...levelUpEffects,
     {
-      x,
-      y: y + 25,
-      level,
-      heroAbbreviation,
-      passiveLabel,
+      x: detail.x,
+      y: detail.y,
+      level: detail.level,
+      heroAbbreviation: detail.heroAbbreviation,
+      passiveLabel: detail.passiveLabel,
       startedAtMs: performance.now(),
     },
   ].slice(-10);
-}
+});
+
+requestAnimationFrame(drawLevelUpEffects);
 
 function drawLevelUpEffects(nowMs: number): void {
   const canvas = document.getElementById("battle-canvas") as HTMLCanvasElement | null;

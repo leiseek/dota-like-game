@@ -10,9 +10,6 @@ type HeroLevelUpVisualEvent = Readonly<{
   passiveLabel: string;
 }>;
 
-type OtherVisualEvent = Readonly<{ type: string }>;
-type WebVisualEvent = HeroLevelUpVisualEvent | OtherVisualEvent;
-
 type LevelUpEffect = Readonly<{
   x: number;
   y: number;
@@ -25,7 +22,7 @@ type LevelUpEffect = Readonly<{
 let levelUpEffects: LevelUpEffect[] = [];
 
 window.addEventListener(VISUAL_EVENT_NAME, (event) => {
-  const detail = (event as CustomEvent<WebVisualEvent>).detail;
+  const detail = (event as CustomEvent<HeroLevelUpVisualEvent>).detail;
   if (detail.type !== "hero-level-up") return;
   levelUpEffects = [
     ...levelUpEffects,

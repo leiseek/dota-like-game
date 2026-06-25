@@ -1,3 +1,5 @@
+export {};
+
 const VISUAL_EVENT_NAME = "ancient-defense:visual-event";
 const CRYSTAL_HUD_ID = "hud-crystals";
 const HERO_LABEL_PATTERN = /^Lv([1-5])\s+([A-Z]+)/;

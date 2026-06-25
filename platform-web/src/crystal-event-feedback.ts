@@ -133,3 +133,5 @@ function roundRect(context: CanvasRenderingContext2D, x: number, y: number, widt
   context.quadraticCurveTo(x, y, x + radius, y);
   context.closePath();
 }
+
+export {};

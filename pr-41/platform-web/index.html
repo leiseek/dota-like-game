@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>远古守卫 Web 试玩版</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="top-bar">
+        <div>
+          <h1>远古守卫</h1>
+          <p>Web 试玩预览 · Core-first Canvas 适配器</p>
+        </div>
+        <div class="hud" aria-live="polite">
+          <span id="hud-crystals">水晶 --/--</span>
+          <span id="hud-gold">金币 --</span>
+          <span id="hud-mana">能量 --</span>
+          <span id="hud-wave">波次 --/--</span>
+          <span id="hud-status">状态 --</span>
+        </div>
+      </header>
+
+      <section class="battle-layout">
+        <canvas id="battle-canvas" width="960" height="540" aria-label="战斗地图试玩预览"></canvas>
+        <aside class="control-panel">
+          <h2>操作</h2>
+          <button id="start-button" type="button">开始</button>
+          <button id="pause-button" type="button">暂停</button>
+          <button id="speed-button" type="button">速度 1x</button>
+          <button id="wave-button" type="button">开始下一波</button>
+          <button id="auto-cast-button" type="button">自动大招：未选择英雄</button>
+
+          <label for="hero-select">建造英雄</label>
+          <select id="hero-select">
+            <option value="hook-guardian">钩锁守卫 · 120 金币</option>
+            <option value="frost-priestess">冰霜祭司 · 110 金币</option>
+            <option value="storm-sigilist">风暴符师 · 140 金币</option>
+            <option value="moonblade-ranger">月刃游侠 · 130 金币</option>
+          </select>
+
+          <button id="save-button" type="button">保存并退出</button>
+          <button id="resume-button" type="button">继续存档</button>
+          <button id="abandon-button" type="button">放弃存档</button>
+
+          <div class="hint">
+            <strong>玩法提示</strong>
+            <p>点击空塔位建造英雄。点击英雄可查看等级、经验和被动；点击敌人可查看状态。选中英雄后点击敌人可手动释放大招，也可以在右侧开启自动大招。</p>
+          </div>
+
+          <section class="status-legend" aria-label="状态效果说明">
+            <strong>状态效果</strong>
+            <dl>
+              <div>
+                <dt>减速</dt>
+                <dd>降低怪物移动速度，是冰霜和风暴连锁的主要连招铺垫。</dd>
+              </div>
+              <div>
+                <dt>眩晕 / 冰冻</dt>
+                <dd>短暂停止怪物移动，适合拦截携晶者或延长输出窗口。</dd>
+              </div>
+              <div>
+                <dt>剧毒</dt>
+                <dd>月刃成长被动造成持续伤害，适合清理残血怪。</dd>
+              </div>
+              <div>
+                <dt>燃烧</dt>
+                <dd>月刃高等级被动叠加持续伤害，和剧毒一起形成 DOT 压力。</dd>
+              </div>
+              <div>
+                <dt>携晶者</dt>
+                <dd>偷到水晶的怪物必须原路返回；被击杀后水晶会自动返还，途中可被其他怪物截走。</dd>
+              </div>
+            </dl>
+          </section>
+
+          <p id="message" class="message">准备就绪。</p>
+        </aside>
+      </section>
+    </main>
+    <script type="module" src="./dist/main.js"></script>
+    <script type="module" src="./dist/level-up-feedback.js"></script>
+  </body>
+</html>

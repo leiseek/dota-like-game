@@ -1,13 +1,27 @@
 ---
 doc_id: CHANGELOG
-version: 0.7.2
+version: 0.7.3
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: Web Preview status legend added
+change_summary: Web Preview in-canvas enemy status labels added
 ---
 
 # Changelog
+
+## [0.7.3] - 2026-06-24
+
+### Added
+
+- Added stacked in-canvas enemy status labels for slow, stun, poison, burn, crystal carrying, and return-to-start behavior.
+- Added shared Web status formatting helpers so selected enemy panels show the correct Chinese status names and remaining seconds instead of mapping every non-stun status to slow.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: Labels are text-first and may overlap in extreme swarm scenes; icon badges should follow after the combat readability pass.
+Required Changes: Validate through PR Preview and continue with richer status/VFX readability.
+Risk Level: Low
 
 ## [0.7.2] - 2026-06-24
 

@@ -92,3 +92,5 @@ function drawLevelUpEffect(context: CanvasRenderingContext2D, effect: LevelUpEff
 
   context.restore();
 }
+
+export {};

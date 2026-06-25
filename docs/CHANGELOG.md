@@ -1,13 +1,34 @@
 ---
 doc_id: CHANGELOG
-version: 0.7.5
+version: 0.7.6
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: Web obstacle clearing feedback added
+change_summary: Web selection information panels upgraded
 ---
 
 # Changelog
+
+## [0.7.6] - 2026-06-24
+
+### Added
+
+- Added Web Preview hero selection profiles with role, summary, special behavior, and play tips.
+- Added Web Preview enemy selection profiles with role, summary, special rules, and counterplay tips.
+- Upgraded the selected hero panel to show Lv1-Lv5 passive progression with unlocked/locked markers.
+- Upgraded the selected enemy panel to show enemy identity, skill/rule summary, counterplay tips, status, buff, and water-crystal escape rule.
+
+### Changed
+
+- Expanded the Canvas selection panel width/height and clipped long lines to keep the current text-first UI readable.
+- Updated hero and tower-slot click messages to point players toward the richer selection panel.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: The panel is still Canvas text and clips long localized lines; a future DOM/React-style inspector would support wrapping, icons, and tabs better.
+Required Changes: Validate through CI and PR Preview, then continue with UI readability and balance-facing information.
+Risk Level: Low
 
 ## [0.7.5] - 2026-06-24
 

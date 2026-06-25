@@ -90,6 +90,7 @@ export function createInitialGameState(level: LevelConfig): GameState {
       health: obstacle.maxHealth,
       maxHealth: obstacle.maxHealth,
       rewardGold: obstacle.rewardGold,
+      clearCost: obstacle.clearCost ?? 0,
       ...(obstacle.unlocksSlotId ? { unlocksSlotId: obstacle.unlocksSlotId } : {}),
       destroyed: false,
     })),

@@ -1,13 +1,28 @@
 ---
 doc_id: CHANGELOG
-version: 0.7.7
+version: 0.7.8
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-25
-change_summary: Web hero level-up feedback overlay added
+change_summary: Web crystal event feedback overlay added
 ---
 
 # Changelog
+
+## [0.7.8] - 2026-06-25
+
+### Added
+
+- Added a Web Preview crystal event feedback overlay module.
+- Added prominent Canvas banners and pulse rings for crystal stolen, crystal intercepted, crystal dropped/returning, crystal recovered, and crystal escaped events.
+- Added `crystal-event-feedback.js` to the Web page as an adapter-only visual layer that observes HUD crystal status transitions without changing core simulation.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: The overlay infers events from localized HUD text; a future core visual-event stream should emit explicit objective events for stronger correctness and easier localization.
+Required Changes: Validate through CI and PR Preview, then continue with a first-class event bridge for objective/combat/level-up feedback.
+Risk Level: Low
 
 ## [0.7.7] - 2026-06-25
 
@@ -120,24 +135,3 @@ Review Result: Pass
 Main Issues: This is a first playtest tuning pass, not a full balance model; Web still needs richer status-effect rendering.
 Required Changes: Validate through PR Preview and continue with Web status/VFX readability.
 Risk Level: Low
-
-## [0.7.0] - 2026-06-24
-
-### Added
-
-- Added returning crystal runtime state with path position and return speed.
-- Added half-speed crystal return after a carrier is killed.
-- Added enemy interception of returning crystals; intercepting enemies immediately become new carriers and turn back toward the start.
-- Added HUD/Web Preview support for rendering returning crystals on the path.
-- Added regression coverage for drop, return movement, recovery, interception, endpoint waiting, and delayed settlement until a returning crystal is safe.
-
-### Changed
-
-- Carrier death no longer instantly recovers the crystal.
-- Final victory now waits until no crystal is being carried or returning.
-- Monsters reaching the Ancient while the crystal is unavailable now wait at the endpoint instead of silently disappearing.
-- Updated GameState schema and task board to document `CRYSTAL-002`.
-
-### Fixed
-
-- Fixed confusing endpoint behavior where monsters could appear to steal a crystal and vanish when `crystal.atBase === false`.

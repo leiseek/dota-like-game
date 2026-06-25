@@ -1,13 +1,34 @@
 ---
 doc_id: CHANGELOG
-version: 0.7.8
+version: 0.7.9
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-25
-change_summary: Web crystal event feedback overlay added
+change_summary: Web visual event bridge v1 added
 ---
 
 # Changelog
+
+## [0.7.9] - 2026-06-25
+
+### Added
+
+- Added `visual-event-bridge.ts` as a Web adapter visual-event bridge.
+- The bridge now emits `ancient-defense:visual-event` events for hero level-up and crystal objective feedback.
+- Added `visual-event-bridge.js` to the Web page before feedback overlays.
+
+### Changed
+
+- Refactored `level-up-feedback.ts` to consume explicit `hero-level-up` visual events instead of patching Canvas text rendering itself.
+- Refactored `crystal-event-feedback.ts` to consume explicit `crystal-event` visual events instead of observing HUD text itself.
+- Centralized current event inference in a single Web bridge so future core/main-adapter event emission can replace it without changing the overlay renderers.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: v1 still infers event sources from rendered labels/HUD inside the bridge; this improves separation but is not yet a true core-emitted event stream.
+Required Changes: Validate through CI and PR Preview, then move event emission into the main Web adapter state-diff path or core visual-event output.
+Risk Level: Medium
 
 ## [0.7.8] - 2026-06-25
 

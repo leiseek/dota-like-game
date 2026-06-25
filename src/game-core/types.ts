@@ -195,6 +195,7 @@ export type ObstacleConfig = Readonly<{
   position: Vector2;
   maxHealth: number;
   rewardGold: number;
+  clearCost?: number;
   unlocksSlotId?: string;
 }>;
 
@@ -211,6 +212,7 @@ export type ObstacleState = Readonly<{
   health: number;
   maxHealth: number;
   rewardGold: number;
+  clearCost: number;
   unlocksSlotId?: string;
   destroyed: boolean;
 }>;
@@ -275,6 +277,7 @@ export type GameAction =
   | Readonly<{ type: "SET_SPEED"; speed: GameSpeed }>
   | Readonly<{ type: "START_NEXT_WAVE" }>
   | Readonly<{ type: "BUILD_HERO"; slotId: EntityId; heroArchetype: string }>
+  | Readonly<{ type: "CLEAR_OBSTACLE"; obstacleId: EntityId }>
   | Readonly<{ type: "PLACE_HERO"; hero: Hero }>
   | Readonly<{ type: "CAST_SKILL"; heroId: EntityId; targetEnemyId: EntityId }>
   | Readonly<{ type: "SET_AUTO_CAST"; heroId: EntityId; enabled: boolean }>

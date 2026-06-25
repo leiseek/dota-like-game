@@ -68,7 +68,7 @@ type HitEffect = {
 type ObstacleClearEffect = {
   type: "obstacle-clear";
   position: Vector2;
-  unlockSlotId?: string;
+  unlockSlotId?: string | undefined;
   ageMs: number;
   durationMs: number;
 };

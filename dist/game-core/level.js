@@ -154,12 +154,12 @@ export const level001Config = {
         { id: "T10", position: { x: 620, y: 430 }, initiallyUnlocked: false },
     ],
     obstacles: [
-        { id: "O01", position: { x: 360, y: 410 }, maxHealth: 120, rewardGold: 60, unlocksSlotId: "T09" },
-        { id: "O02", position: { x: 610, y: 420 }, maxHealth: 150, rewardGold: 80, unlocksSlotId: "T10" },
-        { id: "O03", position: { x: 250, y: 360 }, maxHealth: 100, rewardGold: 50 },
-        { id: "O04", position: { x: 720, y: 130 }, maxHealth: 140, rewardGold: 70 },
-        { id: "O05", position: { x: 500, y: 420 }, maxHealth: 180, rewardGold: 100 },
-        { id: "O06", position: { x: 120, y: 300 }, maxHealth: 80, rewardGold: 40 },
+        { id: "O01", position: { x: 360, y: 410 }, maxHealth: 120, rewardGold: 60, clearCost: 80, unlocksSlotId: "T09" },
+        { id: "O02", position: { x: 610, y: 420 }, maxHealth: 150, rewardGold: 80, clearCost: 100, unlocksSlotId: "T10" },
+        { id: "O03", position: { x: 250, y: 360 }, maxHealth: 100, rewardGold: 50, clearCost: 60 },
+        { id: "O04", position: { x: 720, y: 130 }, maxHealth: 140, rewardGold: 70, clearCost: 80 },
+        { id: "O05", position: { x: 500, y: 420 }, maxHealth: 180, rewardGold: 100, clearCost: 120 },
+        { id: "O06", position: { x: 120, y: 300 }, maxHealth: 80, rewardGold: 40, clearCost: 50 },
     ],
     enemies: [
         { archetype: "rift-grunt", maxHealth: 50, speedUnitsPerSecond: 72, rewardGold: 10 },

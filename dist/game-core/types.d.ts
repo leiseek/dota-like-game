@@ -156,6 +156,7 @@ export type ObstacleConfig = Readonly<{
     position: Vector2;
     maxHealth: number;
     rewardGold: number;
+    clearCost?: number;
     unlocksSlotId?: string;
 }>;
 export type TowerSlotState = Readonly<{
@@ -170,6 +171,7 @@ export type ObstacleState = Readonly<{
     health: number;
     maxHealth: number;
     rewardGold: number;
+    clearCost: number;
     unlocksSlotId?: string;
     destroyed: boolean;
 }>;
@@ -235,6 +237,9 @@ export type GameAction = Readonly<{
     type: "BUILD_HERO";
     slotId: EntityId;
     heroArchetype: string;
+}> | Readonly<{
+    type: "CLEAR_OBSTACLE";
+    obstacleId: EntityId;
 }> | Readonly<{
     type: "PLACE_HERO";
     hero: Hero;

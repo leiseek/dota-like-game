@@ -38,6 +38,8 @@ function applyAction(state, action, level) {
             return startNextWave(state);
         case "BUILD_HERO":
             return buildHero(state, action.slotId, action.heroArchetype, level);
+        case "CLEAR_OBSTACLE":
+            return clearObstacle(state, action.obstacleId);
         case "PLACE_HERO":
             return { ...state, heroes: [...state.heroes, normalizePlacedHero(action.hero, level)] };
         case "SPAWN_ENEMY":
@@ -77,6 +79,19 @@ function buildHero(state, slotId, heroArchetype, level) {
         resources: { ...state.resources, gold: state.resources.gold - config.buildCost },
         heroes: [...state.heroes, hero],
         towerSlots: state.towerSlots.map((candidate) => candidate.id === slot.id ? { ...candidate, occupiedByHeroId: hero.id } : candidate),
+    };
+}
+function clearObstacle(state, obstacleId) {
+    const obstacle = state.obstacles.find((candidate) => candidate.id === obstacleId);
+    if (!obstacle || obstacle.destroyed || state.resources.gold < obstacle.clearCost)
+        return state;
+    return {
+        ...state,
+        resources: { ...state.resources, gold: state.resources.gold - obstacle.clearCost },
+        obstacles: state.obstacles.map((candidate) => candidate.id === obstacle.id ? { ...candidate, health: 0, destroyed: true } : candidate),
+        towerSlots: obstacle.unlocksSlotId
+            ? state.towerSlots.map((slot) => slot.id === obstacle.unlocksSlotId ? { ...slot, unlocked: true } : slot)
+            : state.towerSlots,
     };
 }
 function normalizePlacedHero(hero, level) {

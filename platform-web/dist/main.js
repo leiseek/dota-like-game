@@ -208,10 +208,17 @@ function handleCanvasClick(event) {
         syncUi();
         return;
     }
+    const clickedObstacle = findObstacleAt(point);
+    if (clickedObstacle) {
+        clearClickedObstacle(clickedObstacle);
+        syncUi();
+        return;
+    }
     const clickedSlot = findTowerSlotAt(point);
     if (clickedSlot) {
         if (!clickedSlot.unlocked) {
-            setMessage("该塔位被障碍封锁，后续会加入清障玩法。");
+            const obstacle = gameState.obstacles.find((candidate) => !candidate.destroyed && candidate.unlocksSlotId === clickedSlot.id);
+            setMessage(obstacle ? `该塔位被障碍封锁。点击附近障碍 ${obstacle.id}，花费 ${obstacle.clearCost} 金币清理。` : "该塔位被障碍封锁。");
             return;
         }
         if (clickedSlot.occupiedByHeroId) {
@@ -230,6 +237,21 @@ function handleCanvasClick(event) {
             setMessage(`无法建造 ${heroName(selectedHeroArchetype)}，请检查金币或塔位状态。`);
         }
         syncUi();
+    }
+}
+function clearClickedObstacle(obstacle) {
+    if (gameState.resources.gold < obstacle.clearCost) {
+        setMessage(`金币不足：清理 ${obstacle.id} 需要 ${obstacle.clearCost} 金币。`);
+        return;
+    }
+    dispatch({ type: "CLEAR_OBSTACLE", obstacleId: obstacle.id });
+    const nextObstacle = gameState.obstacles.find((candidate) => candidate.id === obstacle.id);
+    if (nextObstacle?.destroyed) {
+        const unlockText = obstacle.unlocksSlotId ? `，已解锁塔位 ${obstacle.unlocksSlotId}` : "";
+        setMessage(`已清理障碍 ${obstacle.id}${unlockText}。`);
+    }
+    else {
+        setMessage(`无法清理障碍 ${obstacle.id}。`);
     }
 }
 function castSelectedHeroSkill(target) {
@@ -274,6 +296,9 @@ function findHeroAt(point) {
 }
 function findEnemyAt(point) {
     return gameState.enemies.find((enemy) => distance(enemy.position, point) <= 16);
+}
+function findObstacleAt(point) {
+    return gameState.obstacles.find((obstacle) => !obstacle.destroyed && distance(obstacle.position, point) <= 24);
 }
 function findTowerSlotAt(point) {
     return gameState.towerSlots.find((slot) => distance(slot.position, point) <= 22);
@@ -451,6 +476,7 @@ function drawObstacles() {
         context.fill();
         context.stroke();
         drawHealthBar(obstacle.position.x - 20, obstacle.position.y - 26, 40, obstacle.health / obstacle.maxHealth);
+        drawLabel({ x: obstacle.position.x, y: obstacle.position.y + 30 }, `清理 ${obstacle.clearCost}`, "#ffd68a");
     }
 }
 function drawHeroes() {
@@ -627,7 +653,7 @@ function drawOverlayText() {
     context.fillRect(16, 456, 612, 68);
     context.fillStyle = "rgba(255,255,255,0.86)";
     context.font = "16px system-ui, sans-serif";
-    context.fillText("点击塔位：建造 · 点击英雄：查看成长 · 点击敌人：查看/手动大招 · 战斗会显示弹道和命中特效", 32, 486);
+    context.fillText("点击塔位：建造 · 点击障碍：清理解锁塔位 · 点击敌人：查看/手动大招", 32, 486);
     context.fillText(`英雄：${selectedHeroId ?? "未选"} · 敌人：${selectedEnemyId ?? "未选"} · 水晶 ${crystalStatusLabel(gameState.crystal.status)}`, 32, 512);
     context.restore();
 }

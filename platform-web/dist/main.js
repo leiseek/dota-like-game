@@ -37,6 +37,12 @@ const ENEMY_DISPLAY_NAMES = {
     "shield-acolyte": "护盾侍从",
     "rift-beast-hatchling": "裂隙幼兽",
 };
+const STATUS_LABELS = {
+    slow: { text: "减速", color: "#bff8ff" },
+    stun: { text: "眩晕", color: "#ffe28a" },
+    poison: { text: "剧毒", color: "#c8ff8a" },
+    burn: { text: "燃烧", color: "#ff9f43" },
+};
 const canvas = mustGet("battle-canvas");
 const context = mustGetContext(canvas);
 const heroSelect = mustGet("hero-select");
@@ -490,15 +496,7 @@ function drawEnemies() {
         context.fill();
         context.stroke();
         drawHealthBar(enemy.position.x - 18, enemy.position.y - 24, 36, enemy.health / enemy.maxHealth);
-        if (enemy.statusEffects?.some((statusEffect) => statusEffect.type === "stun")) {
-            drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 }, "眩晕", "#ffe28a");
-        }
-        else if (enemy.statusEffects?.some((statusEffect) => statusEffect.type === "slow")) {
-            drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 }, "减速", "#bff8ff");
-        }
-        else if (enemy.returningToStart) {
-            drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 }, "返程", "#ffcf5a");
-        }
+        drawEnemyStatusLabels(enemy);
         if (enemy.carryingCrystal) {
             context.fillStyle = "#ffe28a";
             context.beginPath();
@@ -510,6 +508,12 @@ function drawEnemies() {
             context.fill();
         }
     }
+}
+function drawEnemyStatusLabels(enemy) {
+    const badges = enemyStatusBadges(enemy).slice(0, 4);
+    badges.forEach((badge, index) => {
+        drawLabel({ x: enemy.position.x, y: enemy.position.y + 27 + index * 14 }, badge.text, badge.color);
+    });
 }
 function drawReturningCrystal() {
     const crystal = gameState.crystal;
@@ -763,12 +767,33 @@ function enemyStateLabel(enemy) {
     return "前往圣坛";
 }
 function statusEffectsLabel(enemy) {
-    const effects = enemy.statusEffects?.filter((statusEffect) => statusEffect.remainingTicks > 0) ?? [];
+    const effects = activeEnemyStatusEffects(enemy);
     if (effects.length === 0)
         return "无";
-    return effects
-        .map((statusEffect) => `${statusEffect.type === "stun" ? "眩晕" : "减速"}:${statusEffect.remainingTicks}`)
-        .join("，");
+    return effects.map((statusEffect) => `${statusEffectName(statusEffect)} ${statusEffectRemainingSeconds(statusEffect)}`).join("，");
+}
+function activeEnemyStatusEffects(enemy) {
+    return enemy.statusEffects?.filter((statusEffect) => statusEffect.remainingTicks > 0) ?? [];
+}
+function enemyStatusBadges(enemy) {
+    const badges = [];
+    for (const statusEffect of activeEnemyStatusEffects(enemy)) {
+        const badge = STATUS_LABELS[statusEffect.type];
+        if (!badges.some((candidate) => candidate.text === badge.text))
+            badges.push(badge);
+    }
+    if (enemy.carryingCrystal)
+        badges.push({ text: "携晶", color: "#ffe28a" });
+    else if (enemy.returningToStart)
+        badges.push({ text: "返程", color: "#ffcf5a" });
+    return badges;
+}
+function statusEffectName(statusEffect) {
+    return STATUS_LABELS[statusEffect.type].text;
+}
+function statusEffectRemainingSeconds(statusEffect) {
+    const seconds = Math.max(1, Math.ceil((statusEffect.remainingTicks * level001Config.fixedDeltaMs) / 1000));
+    return `${seconds}s`;
 }
 function drawSettlementPanel() {
     if (!gameState.settlement.isComplete)

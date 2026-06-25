@@ -7,6 +7,7 @@ const DEFAULT_HERO_ARCHETYPE = "hook-guardian";
 const FLOATING_TEXT_DURATION_MS = 900;
 const PROJECTILE_DURATION_MS = 260;
 const HIT_EFFECT_DURATION_MS = 340;
+const OBSTACLE_CLEAR_EFFECT_DURATION_MS = 720;
 const HERO_OPTIONS = [
     DEFAULT_HERO_ARCHETYPE,
     "frost-priestess",
@@ -143,6 +144,10 @@ function addHitEffect(position, style) {
     const effect = { type: "hit", style, position, ageMs: 0, durationMs: HIT_EFFECT_DURATION_MS };
     combatEffects = [...combatEffects, effect].slice(-48);
 }
+function addObstacleClearEffect(position, unlockSlotId) {
+    const effect = { type: "obstacle-clear", position, unlockSlotId, ageMs: 0, durationMs: OBSTACLE_CLEAR_EFFECT_DURATION_MS };
+    combatEffects = [...combatEffects, effect].slice(-48);
+}
 function addFloatingText(text, position) {
     floatingTexts = [
         ...floatingTexts,
@@ -161,11 +166,7 @@ function updateFloatingTexts(deltaMs) {
 }
 function updateCombatEffects(deltaMs) {
     combatEffects = combatEffects
-        .map((effect) => {
-        if (effect.type === "projectile")
-            return { ...effect, ageMs: effect.ageMs + deltaMs };
-        return { ...effect, ageMs: effect.ageMs + deltaMs };
-    })
+        .map((effect) => ({ ...effect, ageMs: effect.ageMs + deltaMs }))
         .filter((effect) => effect.ageMs < effect.durationMs);
 }
 function runFrame(timestamp) {
@@ -242,11 +243,16 @@ function handleCanvasClick(event) {
 function clearClickedObstacle(obstacle) {
     if (gameState.resources.gold < obstacle.clearCost) {
         setMessage(`金币不足：清理 ${obstacle.id} 需要 ${obstacle.clearCost} 金币。`);
+        addFloatingText("金币不足", obstacle.position);
         return;
     }
     dispatch({ type: "CLEAR_OBSTACLE", obstacleId: obstacle.id });
     const nextObstacle = gameState.obstacles.find((candidate) => candidate.id === obstacle.id);
     if (nextObstacle?.destroyed) {
+        addObstacleClearEffect(obstacle.position, obstacle.unlocksSlotId);
+        addFloatingText(`-${obstacle.clearCost} 金币`, obstacle.position);
+        if (obstacle.unlocksSlotId)
+            addFloatingText(`解锁 ${obstacle.unlocksSlotId}`, { x: obstacle.position.x, y: obstacle.position.y + 18 });
         const unlockText = obstacle.unlocksSlotId ? `，已解锁塔位 ${obstacle.unlocksSlotId}` : "";
         setMessage(`已清理障碍 ${obstacle.id}${unlockText}。`);
     }
@@ -566,8 +572,10 @@ function drawCombatEffects() {
     for (const effect of combatEffects) {
         if (effect.type === "projectile")
             drawProjectileEffect(effect);
-        else
+        else if (effect.type === "hit")
             drawHitEffect(effect);
+        else
+            drawObstacleClearEffect(effect);
     }
 }
 function drawProjectileEffect(effect) {
@@ -632,6 +640,32 @@ function drawHitEffect(effect) {
         context.lineTo(effect.position.x, effect.position.y + radius * 0.18);
         context.lineTo(effect.position.x + radius * 0.56, effect.position.y - radius * 0.08);
         context.stroke();
+    }
+    context.restore();
+}
+function drawObstacleClearEffect(effect) {
+    const ratio = Math.min(1, effect.ageMs / effect.durationMs);
+    const radius = 18 + ratio * 34;
+    context.save();
+    context.globalAlpha = Math.max(0, 1 - ratio);
+    context.strokeStyle = "rgba(255, 214, 138, 0.85)";
+    context.lineWidth = 3;
+    context.beginPath();
+    context.arc(effect.position.x, effect.position.y, radius, 0, Math.PI * 2);
+    context.stroke();
+    context.strokeStyle = "rgba(255, 255, 255, 0.72)";
+    context.lineWidth = 2;
+    for (let index = 0; index < 8; index += 1) {
+        const angle = (Math.PI * 2 * index) / 8;
+        const inner = 10 + ratio * 12;
+        const outer = 18 + ratio * 42;
+        context.beginPath();
+        context.moveTo(effect.position.x + Math.cos(angle) * inner, effect.position.y + Math.sin(angle) * inner);
+        context.lineTo(effect.position.x + Math.cos(angle) * outer, effect.position.y + Math.sin(angle) * outer);
+        context.stroke();
+    }
+    if (effect.unlockSlotId) {
+        drawLabel({ x: effect.position.x, y: effect.position.y - 34 - ratio * 12 }, `解锁 ${effect.unlockSlotId}`, "#6effa2");
     }
     context.restore();
 }

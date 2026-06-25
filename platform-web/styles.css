@@ -77,7 +77,8 @@ button:disabled {
 
 .hud span,
 .hint,
-.message {
+.message,
+.status-legend {
   border: 1px solid rgba(246, 240, 223, 0.12);
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.24);
@@ -117,7 +118,8 @@ button:disabled {
   color: rgba(246, 240, 223, 0.76);
 }
 
-.hint {
+.hint,
+.status-legend {
   border-radius: 0.8rem;
   padding: 0.75rem;
 }
@@ -126,6 +128,39 @@ button:disabled {
 .message {
   margin: 0;
   line-height: 1.4;
+}
+
+.status-legend {
+  background: rgba(255, 214, 138, 0.06);
+}
+
+.status-legend strong {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #ffd68a;
+}
+
+.status-legend dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.status-legend div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.status-legend dt {
+  font-weight: 700;
+  color: #f6f0df;
+}
+
+.status-legend dd {
+  margin: 0;
+  color: rgba(246, 240, 223, 0.72);
+  font-size: 0.88rem;
+  line-height: 1.35;
 }
 
 .message {

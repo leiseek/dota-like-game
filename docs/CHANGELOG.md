@@ -1,13 +1,28 @@
 ---
 doc_id: CHANGELOG
-version: 0.7.6
+version: 0.7.7
 status: active
 owner_agent: Team Leader Agent
-last_updated: 2026-06-24
-change_summary: Web selection information panels upgraded
+last_updated: 2026-06-25
+change_summary: Web hero level-up feedback overlay added
 ---
 
 # Changelog
+
+## [0.7.7] - 2026-06-25
+
+### Added
+
+- Added a Web Preview hero level-up feedback overlay module.
+- Hero level changes now show a short-lived `Lv Up` callout, new level text, unlocked passive label, and pulse rings around the hero on the Canvas.
+- Added `level-up-feedback.js` to the Web page as an adapter-only visual layer that observes rendered hero `LvX` labels without changing core simulation.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: The overlay currently infers level changes from rendered Canvas labels; a future core event stream would be more explicit and less coupled to label formatting.
+Required Changes: Validate through CI and PR Preview, then consider adding a first-class visual event bridge for level-ups, kills, and objective events.
+Risk Level: Low
 
 ## [0.7.6] - 2026-06-24
 
@@ -126,39 +141,3 @@ Risk Level: Low
 ### Fixed
 
 - Fixed confusing endpoint behavior where monsters could appear to steal a crystal and vanish when `crystal.atBase === false`.
-
-### Self Review
-
-Review Result: Pass
-Main Issues: Returning crystal visuals are placeholder and should be upgraded through `VFX-001`.
-Required Changes: Validate through PR Preview, then continue with projectile/HIT visual events.
-Risk Level: Medium
-
-## [0.6.1] - 2026-06-24
-
-### Changed
-
-- Replaced official GitHub Actions Pages deployment with branch-based deployment to `gh-pages`.
-- Updated main preview deployment to publish root `pages-dist/` content to the root of `gh-pages`.
-- Updated PR preview deployment to publish `pages-dist/` content under `gh-pages/pr-<PR_NUMBER>/`.
-- Updated PR preview comments to reuse a single marker comment instead of creating a new comment on every push.
-- Updated docs to clarify that Pages source must be `Deploy from a branch`, branch `gh-pages`, folder `/ (root)`.
-
-### Fixed
-
-- Avoids `actions/configure-pages@v5` failing with `Get Pages site failed ... Not Found` before/while Pages is initialized.
-- Avoids relying on official `actions/deploy-pages` PR preview mode, which is currently alpha and not publicly available.
-
-### Self Review
-
-Review Result: Pass
-Main Issues: After this PR merges, the first main deployment must create/update the `gh-pages` branch before repository Pages can be pointed to it.
-Required Changes: Merge this PR, wait for the `gh-pages` branch to be created, then set Pages source to `Deploy from a branch`, branch `gh-pages`, folder `/ (root)`.
-Risk Level: Medium
-
-## [0.6.0] - 2026-06-24
-
-### Added
-
-- Added `npm run build:pages` to build a deployable GitHub Pages artifact.
-- Added `scripts/build-pages.mjs` to prepare `pages-dist/` with `platform-web/`, root `dist/`, `.nojekyll`, and a root redirect page.

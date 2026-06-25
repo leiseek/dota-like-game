@@ -190,12 +190,24 @@ test("killing a crystal carrier starts a returning crystal instead of instant re
   assert.equal(afterSkill.enemies.length, 0);
 });
 
-test("level 001 config exposes the documented 10 waves", () => {
+test("Level 001 config exposes the documented 10 waves", () => {
   const initial = createInitialGameState(level001Config);
+  assert.equal(initial.resources.gold, 360);
   assert.equal(initial.wave.totalWaves, 10);
   assert.equal(level001Config.path.length, 10);
   assert.equal(level001Config.waves?.[0]?.spawnGroups[0]?.count, 8);
   assert.equal(level001Config.waves?.[9]?.spawnGroups[0]?.enemyArchetype, "rift-beast-hatchling");
+});
+
+test("Level 001 starting economy supports a three-hero passive combo opening", () => {
+  const initial = createInitialGameState(level001Config);
+  const withHook = stepSimulation(enqueueAction(initial, { type: "BUILD_HERO", slotId: "T01", heroArchetype: "hook-guardian" }), 0, level001Config);
+  const withFrost = stepSimulation(enqueueAction(withHook, { type: "BUILD_HERO", slotId: "T02", heroArchetype: "frost-priestess" }), 0, level001Config);
+  const withMoonblade = stepSimulation(enqueueAction(withFrost, { type: "BUILD_HERO", slotId: "T03", heroArchetype: "moonblade-ranger" }), 0, level001Config);
+
+  assert.equal(withMoonblade.heroes.length, 3);
+  assert.equal(withMoonblade.resources.gold, 0);
+  assert.deepEqual(withMoonblade.heroes.map((hero) => hero.archetype), ["hook-guardian", "frost-priestess", "moonblade-ranger"]);
 });
 
 test("START_NEXT_WAVE activates deterministic configured spawning", () => {
@@ -258,7 +270,10 @@ test("configured waves auto-start when their scheduled time is reached", () => {
   assert.equal(started.wave.isWaitingNextWave, true);
   assert.equal(started.enemies.length, 0);
 
-  const autoStarted = stepSimulation(started, 1, scheduledLevel);
-  assert.equal(autoStarted.wave.isWaveActive, true);
-  assert.equal(autoStarted.enemies[0]?.id, "enemy-1");
+  const spawned = stepSimulation(started, 1, scheduledLevel);
+  assert.equal(spawned.wave.isWaveActive, true);
+  assert.equal(spawned.enemies.length, 1);
 });
+
+const hudState = selectHudState(createInitialGameState(tutorialLevel));
+assert.equal(hudState.speedOptions.length, 4);

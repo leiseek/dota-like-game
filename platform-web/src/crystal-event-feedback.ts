@@ -10,9 +10,6 @@ type CrystalObjectiveVisualEvent = Readonly<{
   tone: CrystalEventTone;
 }>;
 
-type OtherVisualEvent = Readonly<{ type: string }>;
-type WebVisualEvent = CrystalObjectiveVisualEvent | OtherVisualEvent;
-
 type CrystalEventEffect = Readonly<{
   title: string;
   subtitle: string;
@@ -23,7 +20,7 @@ type CrystalEventEffect = Readonly<{
 let crystalEventEffects: CrystalEventEffect[] = [];
 
 window.addEventListener(VISUAL_EVENT_NAME, (event) => {
-  const detail = (event as CustomEvent<WebVisualEvent>).detail;
+  const detail = (event as CustomEvent<CrystalObjectiveVisualEvent>).detail;
   if (detail.type !== "crystal-event") return;
   crystalEventEffects = [
     ...crystalEventEffects,

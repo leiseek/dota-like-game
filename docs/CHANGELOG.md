@@ -1,13 +1,28 @@
 ---
 doc_id: CHANGELOG
-version: 0.7.4
+version: 0.7.5
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-24
-change_summary: Obstacle clearing MVP added
+change_summary: Web obstacle clearing feedback added
 ---
 
 # Changelog
+
+## [0.7.5] - 2026-06-24
+
+### Added
+
+- Added Web Preview obstacle-clearing feedback effects: gold-spend floating text, unlock floating text, expanding impact ring, and radial debris lines.
+- Added a visible insufficient-gold floating prompt at the clicked obstacle position.
+- Reused the existing Web combat effect lifecycle for obstacle feedback to keep rendering deterministic and contained in the adapter layer.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: This is still placeholder Canvas VFX; later art passes should replace text/ring feedback with icon badges and themed break animations.
+Required Changes: Validate through CI and PR Preview, then continue with obstacle UX and balance tuning.
+Risk Level: Low
 
 ## [0.7.4] - 2026-06-24
 

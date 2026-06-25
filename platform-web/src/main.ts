@@ -40,6 +40,7 @@ type HeroArchetype = (typeof HERO_OPTIONS)[number];
 type CombatVfxStyle = "basic" | "hook" | "frost" | "storm" | "moonblade";
 type EnemyStatusEffect = NonNullable<Enemy["statusEffects"]>[number];
 type EnemyStatusBadge = Readonly<{ text: string; color: string }>;
+type SelectionProfile = Readonly<{ role: string; summary: string; special: string; tips: string }>;
 
 type FloatingText = {
   text: string;
@@ -99,6 +100,84 @@ const ENEMY_DISPLAY_NAMES: Record<string, string> = {
   stoneguard: "石甲卫士",
   "shield-acolyte": "护盾侍从",
   "rift-beast-hatchling": "裂隙幼兽",
+};
+
+const HERO_PROFILES: Record<string, SelectionProfile> = {
+  "hook-guardian": {
+    role: "控制 / 反携晶者",
+    summary: "把偷水晶的怪拉回战线，越后期越像撼地神牛式拦路控制。",
+    special: "大招：钩锁牵引，命中携晶者时附带强控。",
+    tips: "适合放在终点前或返程路口，优先处理携晶者。",
+  },
+  "frost-priestess": {
+    role: "群体减速 / 冰冻控场",
+    summary: "用冰霜铺控场，让雷电和月刃吃到状态组合收益。",
+    special: "大招：范围冰霜伤害，并给敌人挂减速。",
+    tips: "适合覆盖弯道和怪物密集段，是连锁爆发的启动器。",
+  },
+  "storm-sigilist": {
+    role: "连锁爆发 / 状态联动",
+    summary: "对带状态的敌人跳跃更多，负责清杂和补爆发。",
+    special: "大招：风暴连锁闪电，目标被控时额外跳跃。",
+    tips: "和冰霜祭司搭配价值最高，优先打减速/冰冻目标。",
+  },
+  "moonblade-ranger": {
+    role: "弹射清场 / 持续伤害",
+    summary: "月刃弹射叠毒和燃烧，适合处理成群小怪。",
+    special: "大招：月刃弹射，对受控目标有额外伤害收益。",
+    tips: "适合放在长直路或密集路口，吃冰霜和风暴的状态收益。",
+  },
+  guardian: {
+    role: "基础守卫",
+    summary: "教程用基础防御单位。",
+    special: "大招：直接伤害。",
+    tips: "用于验证基础战斗循环。",
+  },
+};
+
+const ENEMY_PROFILES: Record<string, SelectionProfile> = {
+  runner: {
+    role: "基础步兵",
+    summary: "低威胁试炼单位，用来验证路线和基础火力。",
+    special: "无特殊技能。",
+    tips: "普通火力即可处理。",
+  },
+  "rift-grunt": {
+    role: "普通杂兵",
+    summary: "数量多、血量低，是早期经济和英雄经验来源。",
+    special: "无特殊技能，但成群时会拖慢单体火力。",
+    tips: "用月刃弹射或风暴连锁快速清理。",
+  },
+  "swift-beast": {
+    role: "高速突进",
+    summary: "移速高，容易冲过薄弱火力点。",
+    special: "速度快，偷到水晶后也会快速返程。",
+    tips: "用冰霜减速或钩锁守卫在终点前拦截。",
+  },
+  "crystal-thief": {
+    role: "偷晶核心怪",
+    summary: "专门威胁水晶，一旦得手必须原路返回起点。",
+    special: "携晶后从起点离场才扣水晶；途中死亡会掉落水晶。",
+    tips: "优先集火，钩锁守卫对它的价值最高。",
+  },
+  stoneguard: {
+    role: "高血量坦克",
+    summary: "移动慢但很硬，会吸收大量普攻火力。",
+    special: "高生命值，适合掩护后续高速怪。",
+    tips: "用持续伤害和连锁技能压血，不要让它拖住全部输出。",
+  },
+  "shield-acolyte": {
+    role: "护盾侍从",
+    summary: "中等血量支援怪，当前版本以数值压力表现护盾身份。",
+    special: "后续版本会扩展为护盾/减伤光环单位。",
+    tips: "优先观察它和大群杂兵的组合压力。",
+  },
+  "rift-beast-hatchling": {
+    role: "Boss 幼体",
+    summary: "Demo 末波高血量 Boss，用来检验阵容成长和控场上限。",
+    special: "高生命、低速，逼迫玩家利用被动叠加和大招循环。",
+    tips: "需要多英雄组合：冰霜控场、风暴爆发、月刃持续、钩锁保险。",
+  },
 };
 
 const STATUS_LABELS: Record<EnemyStatusEffect["type"], EnemyStatusBadge> = {
@@ -280,7 +359,7 @@ function handleCanvasClick(event: MouseEvent): void {
   const clickedHero = findHeroAt(point);
   if (clickedHero) {
     selectedHeroId = clickedHero.id;
-    setMessage(`已选中英雄：${heroName(clickedHero.archetype)}。点击敌人可手动释放大招。`);
+    setMessage(`已选中英雄：${heroName(clickedHero.archetype)}。面板会显示定位、成长和大招。`);
     syncUi();
     return;
   }
@@ -314,7 +393,7 @@ function handleCanvasClick(event: MouseEvent): void {
     }
     if (clickedSlot.occupiedByHeroId) {
       selectedHeroId = clickedSlot.occupiedByHeroId;
-      setMessage(`已选中塔位英雄：${clickedSlot.occupiedByHeroId}。点击敌人可手动释放大招。`);
+      setMessage(`已选中塔位英雄：${clickedSlot.occupiedByHeroId}。面板会显示成长和技能详情。`);
       syncUi();
       return;
     }
@@ -322,7 +401,7 @@ function handleCanvasClick(event: MouseEvent): void {
     const builtHero = gameState.heroes.find((hero) => hero.slotId === clickedSlot.id);
     if (builtHero) {
       selectedHeroId = builtHero.id;
-      setMessage(`已在 ${clickedSlot.id} 建造 ${heroName(builtHero.archetype)}。点击敌人释放大招，或开启自动大招。`);
+      setMessage(`已在 ${clickedSlot.id} 建造 ${heroName(builtHero.archetype)}。查看面板选择大招手动/自动释放。`);
     } else {
       setMessage(`无法建造 ${heroName(selectedHeroArchetype)}，请检查金币或塔位状态。`);
     }
@@ -832,57 +911,67 @@ function drawSelectionPanel(): void {
   const selectedEnemy = selectedEnemyId ? gameState.enemies.find((enemy) => enemy.id === selectedEnemyId) : undefined;
   if (!selectedHero && !selectedEnemy) return;
 
-  const heroHeight = selectedHero ? 248 : 0;
-  const enemyHeight = selectedEnemy ? 142 : 0;
-  const panelHeight = Math.max(170, heroHeight + enemyHeight + (selectedHero && selectedEnemy ? 18 : 0));
+  const heroHeight = selectedHero ? 292 : 0;
+  const enemyHeight = selectedEnemy ? 184 : 0;
+  const panelHeight = Math.min(508, Math.max(190, heroHeight + enemyHeight + (selectedHero && selectedEnemy ? 14 : 0)));
   context.save();
-  context.fillStyle = "rgba(0, 0, 0, 0.62)";
-  context.fillRect(608, 16, 336, panelHeight);
-  context.strokeStyle = "rgba(255, 255, 255, 0.24)";
+  context.fillStyle = "rgba(0, 0, 0, 0.66)";
+  context.fillRect(588, 16, 356, panelHeight);
+  context.strokeStyle = "rgba(255, 255, 255, 0.26)";
   context.lineWidth = 1.5;
-  context.strokeRect(608, 16, 336, panelHeight);
+  context.strokeRect(588, 16, 356, panelHeight);
 
   let nextY = 42;
   if (selectedHero) {
-    nextY = drawHeroPanel(selectedHero, 626, nextY);
+    nextY = drawHeroPanel(selectedHero, 606, nextY);
   }
   if (selectedEnemy) {
-    drawEnemyPanel(selectedEnemy, 626, nextY + (selectedHero ? 12 : 0));
+    drawEnemyPanel(selectedEnemy, 606, nextY + (selectedHero ? 10 : 0));
   }
   context.restore();
 }
 
 function drawHeroPanel(hero: Hero, x: number, y: number): number {
   const config = getHeroConfig(hero.archetype);
-  const passiveLines = unlockedPassiveLabels(hero, config);
-  drawPanelLine(x, y, `英雄：${heroName(hero.archetype)}`, "#dcecff", true);
-  drawPanelLine(x, y + 22, `等级 Lv${hero.level} · ${xpProgressLabel(hero, config)} · 自动大招 ${hero.autoCastEnabled ? "开" : "关"}`, "rgba(255,255,255,0.9)");
-  drawPanelLine(x, y + 44, `生命 ${hero.health}/${hero.maxHealth} · 造价 ${hero.totalCost}`, "rgba(255,255,255,0.86)");
-  drawPanelLine(x, y + 66, `普攻 ${config?.attackDamage ?? "?"} · 范围 ${config?.attackRange ?? "?"}`, "rgba(255,255,255,0.86)");
-  drawPanelLine(x, y + 88, `大招：${skillLabel(hero)} · 无蓝耗`, "#ffe28a");
-  drawPanelLine(x, y + 110, `伤害 ${config?.skillDamage ?? "?"} · 冷却 ${cooldownSeconds(hero)} · 特效 ${vfxStyleLabel(vfxStyleForHero(hero))}`, "rgba(255,255,255,0.86)");
-  drawPanelLine(x, y + 132, "已解锁被动：", "#9ad1ff", true);
-  passiveLines.slice(0, 5).forEach((line, index) => {
-    drawPanelLine(x + 10, y + 154 + index * 18, `• ${line}`, "rgba(255,255,255,0.86)");
+  const profile = heroProfile(hero.archetype);
+  const passiveLines = passivePreviewLabels(hero, config);
+  drawPanelLine(x, y, `英雄：${heroName(hero.archetype)} · ${profile.role}`, "#dcecff", true);
+  drawPanelLine(x, y + 20, `定位：${profile.summary}`, "rgba(255,255,255,0.88)");
+  drawPanelLine(x, y + 40, `提示：${profile.tips}`, "rgba(255,255,255,0.78)");
+  drawPanelLine(x, y + 62, `等级 Lv${hero.level} · ${xpProgressLabel(hero, config)} · 自动大招 ${hero.autoCastEnabled ? "开" : "关"}`, "rgba(255,255,255,0.9)");
+  drawPanelLine(x, y + 82, `生命 ${hero.health}/${hero.maxHealth} · 造价 ${hero.totalCost} · 普攻 ${config?.attackDamage ?? "?"}`, "rgba(255,255,255,0.86)");
+  drawPanelLine(x, y + 102, `大招：${skillLabel(hero)} · 无蓝耗`, "#ffe28a");
+  drawPanelLine(x, y + 122, `伤害 ${config?.skillDamage ?? "?"} · 冷却 ${cooldownSeconds(hero)} · ${profile.special}`, "rgba(255,255,255,0.86)");
+  drawPanelLine(x, y + 144, "Lv1-Lv5 被动成长：", "#9ad1ff", true);
+  passiveLines.forEach((line, index) => {
+    drawPanelLine(x + 10, y + 164 + index * 18, line, line.startsWith("✓") ? "#c8ff8a" : "rgba(255,255,255,0.68)");
   });
-  return y + 268;
+  return y + 292;
 }
 
 function drawEnemyPanel(enemy: Enemy, x: number, y: number): void {
   const config = level001Config.enemies?.find((candidate) => candidate.archetype === enemy.archetype);
-  drawPanelLine(x, y, `敌人：${enemyName(enemy.archetype)}`, "#ffd1dc", true);
-  drawPanelLine(x, y + 22, `生命 ${Math.ceil(enemy.health)}/${enemy.maxHealth} · 击杀奖励 ${config?.rewardGold ?? 0}`, "rgba(255,255,255,0.86)");
-  drawPanelLine(x, y + 44, `速度 ${config?.speedUnitsPerSecond ?? "?"} · 路径进度 ${enemyPathLabel(enemy)}`, "rgba(255,255,255,0.86)");
-  drawPanelLine(x, y + 66, `状态：${enemyStateLabel(enemy)}`, enemy.carryingCrystal ? "#ffe28a" : "rgba(255,255,255,0.86)");
-  drawPanelLine(x, y + 88, `Buff：${statusEffectsLabel(enemy)}`, "#bff8ff");
-  drawPanelLine(x, y + 110, "规则：到圣坛后必须原路返回，从起点离场", "rgba(255,255,255,0.86)");
+  const profile = enemyProfile(enemy.archetype);
+  drawPanelLine(x, y, `敌人：${enemyName(enemy.archetype)} · ${profile.role}`, "#ffd1dc", true);
+  drawPanelLine(x, y + 20, `简介：${profile.summary}`, "rgba(255,255,255,0.88)");
+  drawPanelLine(x, y + 40, `技能：${profile.special}`, "rgba(255,255,255,0.82)");
+  drawPanelLine(x, y + 62, `生命 ${Math.ceil(enemy.health)}/${enemy.maxHealth} · 击杀奖励 ${config?.rewardGold ?? 0}`, "rgba(255,255,255,0.86)");
+  drawPanelLine(x, y + 82, `速度 ${config?.speedUnitsPerSecond ?? "?"} · 路径进度 ${enemyPathLabel(enemy)}`, "rgba(255,255,255,0.86)");
+  drawPanelLine(x, y + 102, `状态：${enemyStateLabel(enemy)}`, enemy.carryingCrystal ? "#ffe28a" : "rgba(255,255,255,0.86)");
+  drawPanelLine(x, y + 122, `Buff：${statusEffectsLabel(enemy)}`, "#bff8ff");
+  drawPanelLine(x, y + 144, `应对：${profile.tips}`, "rgba(255,255,255,0.78)");
+  drawPanelLine(x, y + 164, "水晶规则：到圣坛后必须原路返回，从起点离场才扣分", "rgba(255,255,255,0.86)");
 }
 
 function drawPanelLine(x: number, y: number, text: string, color: string, bold = false): void {
   context.fillStyle = color;
-  context.font = `${bold ? "bold " : ""}14px system-ui, sans-serif`;
+  context.font = `${bold ? "bold " : ""}13px system-ui, sans-serif`;
   context.textAlign = "left";
-  context.fillText(text, x, y);
+  context.fillText(clipPanelText(text), x, y);
+}
+
+function clipPanelText(text: string): string {
+  return text.length > 31 ? `${text.slice(0, 30)}…` : text;
 }
 
 function getHeroConfig(archetype: string): HeroConfig | undefined {
@@ -944,10 +1033,21 @@ function enemyName(archetype: string): string {
   return ENEMY_DISPLAY_NAMES[archetype] ?? archetype;
 }
 
-function unlockedPassiveLabels(hero: Hero, config?: HeroConfig): readonly string[] {
-  const passives = config?.progression?.passives.filter((passive) => hero.unlockedPassiveIds.includes(passive.id)) ?? [];
-  if (passives.length === 0) return ["暂无"];
-  return passives.map((passive) => `Lv${passive.level} ${passive.label}`);
+function heroProfile(archetype: string): SelectionProfile {
+  return HERO_PROFILES[archetype] ?? { role: "未知英雄", summary: "等待配置英雄简介。", special: "等待配置技能说明。", tips: "等待后续补充。" };
+}
+
+function enemyProfile(archetype: string): SelectionProfile {
+  return ENEMY_PROFILES[archetype] ?? { role: "未知敌人", summary: "等待配置敌人简介。", special: "等待配置技能说明。", tips: "等待后续补充。" };
+}
+
+function passivePreviewLabels(hero: Hero, config?: HeroConfig): readonly string[] {
+  const passives = config?.progression?.passives ?? [];
+  if (passives.length === 0) return ["• 暂无被动成长配置"];
+  return passives.slice(0, 5).map((passive) => {
+    const unlocked = hero.unlockedPassiveIds.includes(passive.id);
+    return `${unlocked ? "✓" : "○"} Lv${passive.level} ${passive.label}：${passive.description}`;
+  });
 }
 
 function xpProgressLabel(hero: Hero, config?: HeroConfig): string {

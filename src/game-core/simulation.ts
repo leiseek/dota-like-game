@@ -57,6 +57,8 @@ function applyAction(state: GameState, action: GameAction, level?: LevelConfig):
       return startNextWave(state);
     case "BUILD_HERO":
       return buildHero(state, action.slotId, action.heroArchetype, level);
+    case "CLEAR_OBSTACLE":
+      return clearObstacle(state, action.obstacleId);
     case "PLACE_HERO":
       return { ...state, heroes: [...state.heroes, normalizePlacedHero(action.hero, level)] };
     case "SPAWN_ENEMY":
@@ -100,6 +102,20 @@ function buildHero(state: GameState, slotId: string, heroArchetype: string, leve
     towerSlots: state.towerSlots.map((candidate) =>
       candidate.id === slot.id ? { ...candidate, occupiedByHeroId: hero.id } : candidate,
     ),
+  };
+}
+
+function clearObstacle(state: GameState, obstacleId: string): GameState {
+  const obstacle = state.obstacles.find((candidate) => candidate.id === obstacleId);
+  if (!obstacle || obstacle.destroyed || state.resources.gold < obstacle.clearCost) return state;
+
+  return {
+    ...state,
+    resources: { ...state.resources, gold: state.resources.gold - obstacle.clearCost },
+    obstacles: state.obstacles.map((candidate) => candidate.id === obstacle.id ? { ...candidate, health: 0, destroyed: true } : candidate),
+    towerSlots: obstacle.unlocksSlotId
+      ? state.towerSlots.map((slot) => slot.id === obstacle.unlocksSlotId ? { ...slot, unlocked: true } : slot)
+      : state.towerSlots,
   };
 }
 
@@ -178,12 +194,6 @@ function getSkillDamageAgainst(level: LevelConfig | undefined, hero: Hero, targe
 
 type PendingEnemyMutation = { damage: number; pullDistance: number; statusEffects: StatusEffectState[] };
 type SkillApplicationResult = Readonly<{ enemies: readonly Enemy[]; killedEnemies: readonly Enemy[] }>;
-
-type StatusDamageResult = Readonly<{
-  enemies: readonly Enemy[];
-  killedEnemies: readonly Enemy[];
-  killCredits: ReadonlyMap<string, string>;
-}>;
 
 function castSkill(state: GameState, heroId: string, targetEnemyId: string, level?: LevelConfig): GameState {
   const hero = state.heroes.find((candidate) => candidate.id === heroId);

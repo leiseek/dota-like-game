@@ -1,96 +1,58 @@
+import {
+  level001Config,
+  type GameState,
+  type Hero,
+  type HeroConfig,
+} from "../../dist/game-core/index.js";
 import { dispatchVisualEvent, type CrystalObjectiveVisualEvent } from "./visual-event-bridge.js";
 
-const CRYSTAL_HUD_ID = "hud-crystals";
-const HERO_LABEL_PATTERN = /^Lv([1-5])\s+([A-Z]+)/;
+type CrystalStatus = GameState["crystal"]["status"];
 
-type CrystalHudStatus = "unknown" | "safe" | "carried" | "dropped" | "returning" | "recovered" | "escaped";
-
-const passiveLabelsByHeroAbbreviation: Record<string, readonly string[]> = {
-  HG: ["Crystal Warden", "Stone Line", "Aftershock Guard", "Hold the Gate", "Ancient Fissure"],
-  FP: ["Chill Touch", "Deep Freeze", "Return Wind", "Frozen Field", "Absolute Zero"],
-  SS: ["Static Link", "Arc Snare", "Overload Jump", "Storm Field", "Thunder Cascade"],
-  MR: ["Moon Glaive", "Night Venom", "Lunar Burn", "Ricochet Hunt", "Eclipse Mark"],
-  G: ["基础守卫成长"],
-};
-
-const seenHeroLevels = new Map<string, number>();
-let previousCrystalStatus: CrystalHudStatus = "unknown";
-
-installHeroLabelSource();
-installCrystalHudSource();
-
-function installHeroLabelSource(): void {
-  const originalFillText = CanvasRenderingContext2D.prototype.fillText;
-
-  CanvasRenderingContext2D.prototype.fillText = function patchedFillText(
-    this: CanvasRenderingContext2D,
-    text: string,
-    x: number,
-    y: number,
-    maxWidth?: number,
-  ): void {
-    observeHeroLevelText(this, text, x, y);
-    if (maxWidth === undefined) originalFillText.call(this, text, x, y);
-    else originalFillText.call(this, text, x, y, maxWidth);
-  };
+export function emitVisualEventsFromStateDiff(previousState: GameState, nextState: GameState): void {
+  emitHeroLevelUpEvents(previousState, nextState);
+  emitCrystalObjectiveEvents(previousState, nextState);
 }
 
-function installCrystalHudSource(): void {
-  const hudElement = document.getElementById(CRYSTAL_HUD_ID);
-  if (!hudElement) return;
+function emitHeroLevelUpEvents(previousState: GameState, nextState: GameState): void {
+  for (const nextHero of nextState.heroes) {
+    const previousHero = previousState.heroes.find((hero) => hero.id === nextHero.id);
+    if (!previousHero || nextHero.level <= previousHero.level) continue;
 
-  previousCrystalStatus = parseCrystalHudStatus(hudElement.textContent ?? "");
-  new MutationObserver(() => observeCrystalStatus(hudElement)).observe(hudElement, {
-    childList: true,
-    characterData: true,
-    subtree: true,
-  });
+    dispatchVisualEvent({
+      type: "hero-level-up",
+      x: nextHero.position.x,
+      y: nextHero.position.y,
+      level: nextHero.level,
+      heroAbbreviation: shortHeroName(nextHero.archetype),
+      passiveLabel: unlockedPassiveLabel(previousHero, nextHero),
+    });
+  }
 }
 
-function observeHeroLevelText(context: CanvasRenderingContext2D, text: string, x: number, y: number): void {
-  if (context.canvas.id !== "battle-canvas") return;
-  const match = HERO_LABEL_PATTERN.exec(text);
-  if (!match) return;
+function emitCrystalObjectiveEvents(previousState: GameState, nextState: GameState): void {
+  const previousStatus = previousState.crystal.status;
+  const nextStatus = nextState.crystal.status;
+  if (previousStatus === nextStatus) return;
 
-  const level = Number(match[1]);
-  const heroAbbreviation = match[2] ?? "?";
-  const heroKey = `${heroAbbreviation}:${Math.round(x)}:${Math.round(y)}`;
-  const previousLevel = seenHeroLevels.get(heroKey);
-  seenHeroLevels.set(heroKey, Math.max(previousLevel ?? level, level));
-
-  if (previousLevel === undefined || level <= previousLevel) return;
-
-  const passiveLabel = passiveLabelsByHeroAbbreviation[heroAbbreviation]?.[level - 1] ?? "新被动";
-  dispatchVisualEvent({
-    type: "hero-level-up",
-    x,
-    y: y + 25,
-    level,
-    heroAbbreviation,
-    passiveLabel,
-  });
-}
-
-function observeCrystalStatus(element: HTMLElement): void {
-  const nextStatus = parseCrystalHudStatus(element.textContent ?? "");
-  if (nextStatus === "unknown" || nextStatus === previousCrystalStatus) return;
-
-  const event = createCrystalVisualEvent(previousCrystalStatus, nextStatus);
-  previousCrystalStatus = nextStatus;
+  const event = createCrystalVisualEvent(previousStatus, nextStatus);
   if (event) dispatchVisualEvent(event);
 }
 
-function parseCrystalHudStatus(text: string): CrystalHudStatus {
-  if (text.includes("被携带")) return "carried";
-  if (text.includes("掉落")) return "dropped";
-  if (text.includes("返回中")) return "returning";
-  if (text.includes("已回收")) return "recovered";
-  if (text.includes("已被运出")) return "escaped";
-  if (text.includes("安全")) return "safe";
-  return "unknown";
+function unlockedPassiveLabel(previousHero: Hero, nextHero: Hero): string {
+  const config = heroConfig(nextHero.archetype);
+  const newlyUnlockedPassiveIds = nextHero.unlockedPassiveIds.filter((passiveId) => !previousHero.unlockedPassiveIds.includes(passiveId));
+  const newlyUnlockedPassive = config?.progression?.passives.find((passive) => newlyUnlockedPassiveIds.includes(passive.id));
+  if (newlyUnlockedPassive) return newlyUnlockedPassive.label;
+
+  const levelPassive = config?.progression?.passives.find((passive) => passive.level === nextHero.level);
+  return levelPassive?.label ?? `Lv${nextHero.level} 新被动`;
 }
 
-function createCrystalVisualEvent(previous: CrystalHudStatus, next: CrystalHudStatus): CrystalObjectiveVisualEvent | undefined {
+function heroConfig(archetype: string): HeroConfig | undefined {
+  return level001Config.heroConfigs?.find((config) => config.archetype === archetype);
+}
+
+function createCrystalVisualEvent(previous: CrystalStatus, next: CrystalStatus): CrystalObjectiveVisualEvent | undefined {
   if (next === "carried") {
     const intercepted = previous === "returning" || previous === "dropped";
     return {
@@ -130,4 +92,11 @@ function createCrystalVisualEvent(previous: CrystalHudStatus, next: CrystalHudSt
   }
 
   return undefined;
+}
+
+function shortHeroName(archetype: string): string {
+  return archetype
+    .split("-")
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }

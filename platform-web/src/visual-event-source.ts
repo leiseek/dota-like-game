@@ -1,23 +1,55 @@
+import {
+  level001Config,
+  type GameState,
+  type Hero,
+  type HeroConfig,
+} from "../../dist/game-core/index.js";
 import { dispatchVisualEvent, type CrystalObjectiveVisualEvent } from "./visual-event-bridge.js";
 
-const CRYSTAL_HUD_ID = "hud-crystals";
+type CrystalStatus = GameState["crystal"]["status"];
+type CrystalHudStatus = "unknown" | CrystalStatus;
+
 const HERO_LABEL_PATTERN = /^Lv([1-5])\s+([A-Z]+)/;
-
-type CrystalHudStatus = "unknown" | "safe" | "carried" | "dropped" | "returning" | "recovered" | "escaped";
-
-const passiveLabelsByHeroAbbreviation: Record<string, readonly string[]> = {
-  HG: ["Crystal Warden", "Stone Line", "Aftershock Guard", "Hold the Gate", "Ancient Fissure"],
-  FP: ["Chill Touch", "Deep Freeze", "Return Wind", "Frozen Field", "Absolute Zero"],
-  SS: ["Static Link", "Arc Snare", "Overload Jump", "Storm Field", "Thunder Cascade"],
-  MR: ["Moon Glaive", "Night Venom", "Lunar Burn", "Ricochet Hunt", "Eclipse Mark"],
-  G: ["基础守卫成长"],
-};
-
+const CRYSTAL_HUD_ID = "hud-crystals";
 const seenHeroLevels = new Map<string, number>();
 let previousCrystalStatus: CrystalHudStatus = "unknown";
 
-installHeroLabelSource();
-installCrystalHudSource();
+installCompatibilityVisualEventSource();
+
+export function emitVisualEventsFromStateDiff(previousState: GameState, nextState: GameState): void {
+  emitHeroLevelUpEvents(previousState, nextState);
+  emitCrystalObjectiveEvents(previousState, nextState);
+}
+
+function installCompatibilityVisualEventSource(): void {
+  installHeroLabelSource();
+  installCrystalHudSource();
+}
+
+function emitHeroLevelUpEvents(previousState: GameState, nextState: GameState): void {
+  for (const nextHero of nextState.heroes) {
+    const previousHero = previousState.heroes.find((hero) => hero.id === nextHero.id);
+    if (!previousHero || nextHero.level <= previousHero.level) continue;
+
+    dispatchVisualEvent({
+      type: "hero-level-up",
+      x: nextHero.position.x,
+      y: nextHero.position.y,
+      level: nextHero.level,
+      heroAbbreviation: shortHeroName(nextHero.archetype),
+      passiveLabel: unlockedPassiveLabel(previousHero, nextHero),
+    });
+  }
+}
+
+function emitCrystalObjectiveEvents(previousState: GameState, nextState: GameState): void {
+  const previousStatus = previousState.crystal.status;
+  const nextStatus = nextState.crystal.status;
+  if (previousStatus === nextStatus) return;
+
+  const event = createCrystalVisualEvent(previousStatus, nextStatus);
+  if (event) dispatchVisualEvent(event);
+}
 
 function installHeroLabelSource(): void {
   const originalFillText = CanvasRenderingContext2D.prototype.fillText;
@@ -60,14 +92,13 @@ function observeHeroLevelText(context: CanvasRenderingContext2D, text: string, x
 
   if (previousLevel === undefined || level <= previousLevel) return;
 
-  const passiveLabel = passiveLabelsByHeroAbbreviation[heroAbbreviation]?.[level - 1] ?? "新被动";
   dispatchVisualEvent({
     type: "hero-level-up",
     x,
     y: y + 25,
     level,
     heroAbbreviation,
-    passiveLabel,
+    passiveLabel: passiveLabelForHeroAbbreviation(heroAbbreviation, level),
   });
 }
 
@@ -80,6 +111,31 @@ function observeCrystalStatus(element: HTMLElement): void {
   if (event) dispatchVisualEvent(event);
 }
 
+function unlockedPassiveLabel(previousHero: Hero, nextHero: Hero): string {
+  const config = heroConfig(nextHero.archetype);
+  const newlyUnlockedPassiveIds = nextHero.unlockedPassiveIds.filter((passiveId) => !previousHero.unlockedPassiveIds.includes(passiveId));
+  const newlyUnlockedPassive = config?.progression?.passives.find((passive) => newlyUnlockedPassiveIds.includes(passive.id));
+  if (newlyUnlockedPassive) return newlyUnlockedPassive.label;
+
+  const levelPassive = config?.progression?.passives.find((passive) => passive.level === nextHero.level);
+  return levelPassive?.label ?? `Lv${nextHero.level} 新被动`;
+}
+
+function passiveLabelForHeroAbbreviation(heroAbbreviation: string, level: number): string {
+  const archetype = archetypeForHeroAbbreviation(heroAbbreviation);
+  const config = archetype ? heroConfig(archetype) : undefined;
+  const levelPassive = config?.progression?.passives.find((passive) => passive.level === level);
+  return levelPassive?.label ?? `Lv${level} 新被动`;
+}
+
+function archetypeForHeroAbbreviation(heroAbbreviation: string): string | undefined {
+  return level001Config.heroConfigs?.find((config) => shortHeroName(config.archetype) === heroAbbreviation)?.archetype;
+}
+
+function heroConfig(archetype: string): HeroConfig | undefined {
+  return level001Config.heroConfigs?.find((config) => config.archetype === archetype);
+}
+
 function parseCrystalHudStatus(text: string): CrystalHudStatus {
   if (text.includes("被携带")) return "carried";
   if (text.includes("掉落")) return "dropped";
@@ -90,7 +146,7 @@ function parseCrystalHudStatus(text: string): CrystalHudStatus {
   return "unknown";
 }
 
-function createCrystalVisualEvent(previous: CrystalHudStatus, next: CrystalHudStatus): CrystalObjectiveVisualEvent | undefined {
+function createCrystalVisualEvent(previous: CrystalHudStatus, next: CrystalStatus): CrystalObjectiveVisualEvent | undefined {
   if (next === "carried") {
     const intercepted = previous === "returning" || previous === "dropped";
     return {
@@ -130,4 +186,11 @@ function createCrystalVisualEvent(previous: CrystalHudStatus, next: CrystalHudSt
   }
 
   return undefined;
+}
+
+function shortHeroName(archetype: string): string {
+  return archetype
+    .split("-")
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }

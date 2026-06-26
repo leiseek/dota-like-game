@@ -1,10 +1,10 @@
 ---
 doc_id: WEB_ADAPTER_STRUCTURE
-version: 0.1.0
+version: 0.1.1
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-26
-change_summary: Initial Web adapter modular boundary guide
+change_summary: Initial Web adapter modular boundary guide with realistic first guardrail
 ---
 
 # Web Adapter Structure
@@ -22,8 +22,10 @@ This document defines how the Web Preview adapter should evolve without letting 
 Current rule:
 
 ```text
-platform-web/src/main.ts <= 1150 lines
+platform-web/src/main.ts <= 1300 lines
 ```
+
+This first threshold is intentionally above the current large file so the guard can merge safely. It is still a hard stop against unlimited growth. After each extraction pass, lower the threshold to lock in the reduction.
 
 If a new feature would push `main.ts` above this limit, the feature must first extract code into focused modules.
 

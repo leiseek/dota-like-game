@@ -1,14 +1,6 @@
-const LEVEL_UP_EFFECT_DURATION_MS = 1200;
-const VISUAL_EVENT_NAME = "ancient-defense:visual-event";
+import { VISUAL_EVENT_NAME, type HeroLevelUpVisualEvent } from "./visual-event-bridge.js";
 
-type HeroLevelUpVisualEvent = Readonly<{
-  type: "hero-level-up";
-  x: number;
-  y: number;
-  level: number;
-  heroAbbreviation: string;
-  passiveLabel: string;
-}>;
+const LEVEL_UP_EFFECT_DURATION_MS = 1200;
 
 type LevelUpEffect = Readonly<{
   x: number;
@@ -89,5 +81,3 @@ function drawLevelUpEffect(context: CanvasRenderingContext2D, effect: LevelUpEff
 
   context.restore();
 }
-
-export {};

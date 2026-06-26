@@ -1,13 +1,33 @@
 ---
 doc_id: CHANGELOG
-version: 0.8.0
+version: 0.8.1
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-25
-change_summary: Web visual event bus and source separated
+change_summary: State-diff visual event API added
 ---
 
 # Changelog
+
+## [0.8.1] - 2026-06-25
+
+### Added
+
+- Added `emitVisualEventsFromStateDiff(previousState, nextState)` to `visual-event-source.ts`.
+- The state-diff API emits explicit hero level-up visual events from hero level changes.
+- The state-diff API emits explicit crystal objective visual events from crystal status changes.
+
+### Changed
+
+- Kept the existing Canvas/HUD compatibility source active so current Web feedback remains functional until `main.ts` is wired to the new state-diff API.
+- Passive labels for both state-diff and compatibility level-up paths now resolve from `level001Config.heroConfigs` instead of a duplicated abbreviation table.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: `main.ts` is not wired in this PR because replacing the 1100+ line file through the current connector is high-risk; the new API is ready for a smaller follow-up once we can patch the import and `setGameState` call safely.
+Required Changes: Validate through CI and PR Preview, then wire `main.ts` to call `emitVisualEventsFromStateDiff` and remove the compatibility Canvas/HUD source.
+Risk Level: Low
 
 ## [0.8.0] - 2026-06-25
 
@@ -99,65 +119,4 @@ Risk Level: Low
 Review Result: Pass
 Main Issues: The panel is still Canvas text and clips long localized lines; a future DOM/React-style inspector would support wrapping, icons, and tabs better.
 Required Changes: Validate through CI and PR Preview, then continue with UI readability and balance-facing information.
-Risk Level: Low
-
-## [0.7.5] - 2026-06-24
-
-### Added
-
-- Added Web Preview obstacle-clearing feedback effects: gold-spend floating text, unlock floating text, expanding impact ring, and radial debris lines.
-- Added a visible insufficient-gold floating prompt at the clicked obstacle position.
-- Reused the existing Web combat effect lifecycle for obstacle feedback to keep rendering deterministic and contained in the adapter layer.
-
-### Self Review
-
-Review Result: Pass
-Main Issues: This is still placeholder Canvas VFX; later art passes should replace text/ring feedback with icon badges and themed break animations.
-Required Changes: Validate through CI and PR Preview, then continue with obstacle UX and balance tuning.
-Risk Level: Low
-
-## [0.7.4] - 2026-06-24
-
-### Added
-
-- Added `CLEAR_OBSTACLE` core action for deterministic obstacle clearing.
-- Added obstacle `clearCost` config/state data.
-- Clearing an obstacle now spends gold, marks the obstacle destroyed, sets its health to 0, and unlocks any linked tower slot.
-- Added Web Preview click interaction for clearing obstacles directly on the map.
-- Added obstacle clear-cost labels to the Canvas map.
-- Added regression coverage for clear costs, insufficient-gold rejection, duplicate-clear rejection, linked tower-slot unlocking, and building on a cleared slot.
-
-### Self Review
-
-Review Result: Pass
-Main Issues: Obstacle clearing is instant and gold-only; later milestones should consider hero attack/worker/channel-clear variants if playtests need more depth.
-Required Changes: Validate through CI and PR Preview, then continue with stronger obstacle UX and balance tuning.
-Risk Level: Medium
-
-## [0.7.3] - 2026-06-24
-
-### Added
-
-- Added stacked in-canvas enemy status labels for slow, stun, poison, burn, crystal carrying, and return-to-start behavior.
-- Added shared Web status formatting helpers so selected enemy panels show the correct Chinese status names and remaining seconds instead of mapping every non-stun status to slow.
-
-### Self Review
-
-Review Result: Pass
-Main Issues: Labels are text-first and may overlap in extreme swarm scenes; icon badges should follow after the combat readability pass.
-Required Changes: Validate through PR Preview and continue with richer status/VFX readability.
-Risk Level: Low
-
-## [0.7.2] - 2026-06-24
-
-### Added
-
-- Added a Chinese Web Preview status legend for slow, stun/freeze, poison, burn, and crystal-carrier rules.
-- Styled the status legend as a compact right-panel reference card so playtesters can understand passive effects without reading code or docs.
-
-### Self Review
-
-Review Result: Pass
-Main Issues: Canvas enemy labels still only prioritize one status at a time; richer per-enemy icon stacks should follow in a dedicated Web rendering slice.
-Required Changes: Validate through PR Preview and continue with in-Canvas status rendering polish.
 Risk Level: Low

@@ -1,13 +1,28 @@
 ---
 doc_id: CHANGELOG
-version: 0.8.3
+version: 0.8.4
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-26
-change_summary: Selection profile module added
+change_summary: Selection profile extraction codemod added
 ---
 
 # Changelog
+
+## [0.8.4] - 2026-06-26
+
+### Added
+
+- Added `scripts/refactor-web-selection-profiles.mjs` to automate replacing duplicated `main.ts` selection profile data with imports from `profiles/selection-profiles.ts`.
+- Added `npm run refactor:web-selection-profiles` and `npm run refactor:web-selection-profiles:dry-run` scripts.
+- Documented the codemod workflow in `docs/WEB_ADAPTER_STRUCTURE.md`.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: The codemod is ready, but the duplicate block is not removed in this PR to avoid unsafe whole-file replacement of `main.ts` through the connector.
+Required Changes: Run the codemod in a follow-up, validate `npm run check`, then lower the `main.ts` line limit after the extraction is committed.
+Risk Level: Low
 
 ## [0.8.3] - 2026-06-26
 

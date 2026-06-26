@@ -1,14 +1,6 @@
+import { VISUAL_EVENT_NAME, type CrystalEventTone, type CrystalObjectiveVisualEvent } from "./visual-event-bridge.js";
+
 const CRYSTAL_EVENT_DURATION_MS = 1500;
-const VISUAL_EVENT_NAME = "ancient-defense:visual-event";
-
-type CrystalEventTone = "danger" | "warning" | "success";
-
-type CrystalObjectiveVisualEvent = Readonly<{
-  type: "crystal-event";
-  title: string;
-  subtitle: string;
-  tone: CrystalEventTone;
-}>;
 
 type CrystalEventEffect = Readonly<{
   title: string;
@@ -130,5 +122,3 @@ function roundRect(context: CanvasRenderingContext2D, x: number, y: number, widt
   context.quadraticCurveTo(x, y, x + radius, y);
   context.closePath();
 }
-
-export {};

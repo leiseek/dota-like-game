@@ -1,13 +1,33 @@
 ---
 doc_id: CHANGELOG
-version: 0.7.9
+version: 0.8.0
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-25
-change_summary: Web visual event bridge v1 added
+change_summary: Web visual event bus and source separated
 ---
 
 # Changelog
+
+## [0.8.0] - 2026-06-25
+
+### Added
+
+- Added `visual-event-source.ts` as the current Web visual-event source module.
+- Added explicit Web page loading for `visual-event-source.js` between the event bridge and feedback overlays.
+
+### Changed
+
+- Converted `visual-event-bridge.ts` into a pure event bus and shared visual-event contract module.
+- Moved current compatibility event inference for hero level-up and crystal objective events out of the bridge and into `visual-event-source.ts`.
+- Updated `level-up-feedback.ts` and `crystal-event-feedback.ts` to import the shared event name and event types from the bridge instead of duplicating contracts locally.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: The current source still uses compatibility inference from Canvas labels and HUD text; this round intentionally isolates that source so it can be replaced by `main.ts` state-diff emission with less risk.
+Required Changes: Validate through CI and PR Preview, then wire `main.ts` `previousState -> nextState` diff emission into the source path.
+Risk Level: Low
 
 ## [0.7.9] - 2026-06-25
 
@@ -140,19 +160,4 @@ Risk Level: Low
 Review Result: Pass
 Main Issues: Canvas enemy labels still only prioritize one status at a time; richer per-enemy icon stacks should follow in a dedicated Web rendering slice.
 Required Changes: Validate through PR Preview and continue with in-Canvas status rendering polish.
-Risk Level: Low
-
-## [0.7.1] - 2026-06-24
-
-### Changed
-
-- Increased Level 001 starting gold from 300 to 360 so players can open with a three-hero passive combo instead of being forced into a two-hero opener.
-- Updated hero passive descriptions to reflect currently active effects for slow, freeze, lightning-chain, poison, burn, cleave, and anti-carrier mechanics.
-- Added regression coverage for the three-hero Level 001 opening economy.
-
-### Self Review
-
-Review Result: Pass
-Main Issues: This is a first playtest tuning pass, not a full balance model; Web still needs richer status-effect rendering.
-Required Changes: Validate through PR Preview and continue with Web status/VFX readability.
 Risk Level: Low

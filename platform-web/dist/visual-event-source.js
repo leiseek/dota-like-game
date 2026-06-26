@@ -1,17 +1,42 @@
+import { level001Config, } from "../../dist/game-core/index.js";
 import { dispatchVisualEvent } from "./visual-event-bridge.js";
-const CRYSTAL_HUD_ID = "hud-crystals";
 const HERO_LABEL_PATTERN = /^Lv([1-5])\s+([A-Z]+)/;
-const passiveLabelsByHeroAbbreviation = {
-    HG: ["Crystal Warden", "Stone Line", "Aftershock Guard", "Hold the Gate", "Ancient Fissure"],
-    FP: ["Chill Touch", "Deep Freeze", "Return Wind", "Frozen Field", "Absolute Zero"],
-    SS: ["Static Link", "Arc Snare", "Overload Jump", "Storm Field", "Thunder Cascade"],
-    MR: ["Moon Glaive", "Night Venom", "Lunar Burn", "Ricochet Hunt", "Eclipse Mark"],
-    G: ["基础守卫成长"],
-};
+const CRYSTAL_HUD_ID = "hud-crystals";
 const seenHeroLevels = new Map();
 let previousCrystalStatus = "unknown";
-installHeroLabelSource();
-installCrystalHudSource();
+installCompatibilityVisualEventSource();
+export function emitVisualEventsFromStateDiff(previousState, nextState) {
+    emitHeroLevelUpEvents(previousState, nextState);
+    emitCrystalObjectiveEvents(previousState, nextState);
+}
+function installCompatibilityVisualEventSource() {
+    installHeroLabelSource();
+    installCrystalHudSource();
+}
+function emitHeroLevelUpEvents(previousState, nextState) {
+    for (const nextHero of nextState.heroes) {
+        const previousHero = previousState.heroes.find((hero) => hero.id === nextHero.id);
+        if (!previousHero || nextHero.level <= previousHero.level)
+            continue;
+        dispatchVisualEvent({
+            type: "hero-level-up",
+            x: nextHero.position.x,
+            y: nextHero.position.y,
+            level: nextHero.level,
+            heroAbbreviation: shortHeroName(nextHero.archetype),
+            passiveLabel: unlockedPassiveLabel(previousHero, nextHero),
+        });
+    }
+}
+function emitCrystalObjectiveEvents(previousState, nextState) {
+    const previousStatus = previousState.crystal.status;
+    const nextStatus = nextState.crystal.status;
+    if (previousStatus === nextStatus)
+        return;
+    const event = createCrystalVisualEvent(previousStatus, nextStatus);
+    if (event)
+        dispatchVisualEvent(event);
+}
 function installHeroLabelSource() {
     const originalFillText = CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText = function patchedFillText(text, x, y, maxWidth) {
@@ -46,14 +71,13 @@ function observeHeroLevelText(context, text, x, y) {
     seenHeroLevels.set(heroKey, Math.max(previousLevel ?? level, level));
     if (previousLevel === undefined || level <= previousLevel)
         return;
-    const passiveLabel = passiveLabelsByHeroAbbreviation[heroAbbreviation]?.[level - 1] ?? "新被动";
     dispatchVisualEvent({
         type: "hero-level-up",
         x,
         y: y + 25,
         level,
         heroAbbreviation,
-        passiveLabel,
+        passiveLabel: passiveLabelForHeroAbbreviation(heroAbbreviation, level),
     });
 }
 function observeCrystalStatus(element) {
@@ -64,6 +88,27 @@ function observeCrystalStatus(element) {
     previousCrystalStatus = nextStatus;
     if (event)
         dispatchVisualEvent(event);
+}
+function unlockedPassiveLabel(previousHero, nextHero) {
+    const config = heroConfig(nextHero.archetype);
+    const newlyUnlockedPassiveIds = nextHero.unlockedPassiveIds.filter((passiveId) => !previousHero.unlockedPassiveIds.includes(passiveId));
+    const newlyUnlockedPassive = config?.progression?.passives.find((passive) => newlyUnlockedPassiveIds.includes(passive.id));
+    if (newlyUnlockedPassive)
+        return newlyUnlockedPassive.label;
+    const levelPassive = config?.progression?.passives.find((passive) => passive.level === nextHero.level);
+    return levelPassive?.label ?? `Lv${nextHero.level} 新被动`;
+}
+function passiveLabelForHeroAbbreviation(heroAbbreviation, level) {
+    const archetype = archetypeForHeroAbbreviation(heroAbbreviation);
+    const config = archetype ? heroConfig(archetype) : undefined;
+    const levelPassive = config?.progression?.passives.find((passive) => passive.level === level);
+    return levelPassive?.label ?? `Lv${level} 新被动`;
+}
+function archetypeForHeroAbbreviation(heroAbbreviation) {
+    return level001Config.heroConfigs?.find((config) => shortHeroName(config.archetype) === heroAbbreviation)?.archetype;
+}
+function heroConfig(archetype) {
+    return level001Config.heroConfigs?.find((config) => config.archetype === archetype);
 }
 function parseCrystalHudStatus(text) {
     if (text.includes("被携带"))
@@ -117,5 +162,11 @@ function createCrystalVisualEvent(previous, next) {
         };
     }
     return undefined;
+}
+function shortHeroName(archetype) {
+    return archetype
+        .split("-")
+        .map((part) => part[0]?.toUpperCase() ?? "")
+        .join("");
 }
 //# sourceMappingURL=visual-event-source.js.map

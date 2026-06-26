@@ -1,10 +1,10 @@
 ---
 doc_id: WEB_ADAPTER_STRUCTURE
-version: 0.1.2
+version: 0.1.3
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-26
-change_summary: Selection profile module extraction target added
+change_summary: Selection profile codemod documented
 ---
 
 # Web Adapter Structure
@@ -86,11 +86,33 @@ platform-web/src/input/*.ts
 ```text
 Done:
 - Created platform-web/src/profiles/selection-profiles.ts as the target home for hero names, enemy names, hero profiles, enemy profiles, and status badge copy.
+- Added scripts/refactor-web-selection-profiles.mjs to automate the main.ts extraction safely.
 
 Next:
-- Replace duplicate constants/functions in main.ts with imports from profiles/selection-profiles.ts.
+- Run npm run refactor:web-selection-profiles:dry-run to inspect the expected line delta.
+- Run npm run refactor:web-selection-profiles to update main.ts.
+- Run npm run check.
 - Lower the main.ts line limit after the duplicate block is removed.
 ```
+
+## Selection Profile Codemod
+
+Use the codemod instead of hand-editing the 1000+ line `main.ts` file:
+
+```bash
+npm run refactor:web-selection-profiles:dry-run
+npm run refactor:web-selection-profiles
+npm run check
+```
+
+The codemod performs these operations:
+
+- adds imports from `platform-web/src/profiles/selection-profiles.ts`
+- removes local display-name maps
+- removes local hero/enemy profile maps
+- removes local status badge map
+- removes duplicate helper functions now provided by the profile module
+- rewrites status badge lookups to `statusBadgeFor(statusEffect.type)`
 
 ## Refactor Roadmap
 

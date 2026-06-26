@@ -1,5 +1,5 @@
+import { VISUAL_EVENT_NAME } from "./visual-event-bridge.js";
 const CRYSTAL_EVENT_DURATION_MS = 1500;
-const VISUAL_EVENT_NAME = "ancient-defense:visual-event";
 let crystalEventEffects = [];
 window.addEventListener(VISUAL_EVENT_NAME, (event) => {
     const detail = event.detail;
@@ -100,5 +100,4 @@ function roundRect(context, x, y, width, height, radius) {
     context.quadraticCurveTo(x, y, x + radius, y);
     context.closePath();
 }
-export {};
 //# sourceMappingURL=crystal-event-feedback.js.map

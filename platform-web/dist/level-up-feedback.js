@@ -1,5 +1,5 @@
+import { VISUAL_EVENT_NAME } from "./visual-event-bridge.js";
 const LEVEL_UP_EFFECT_DURATION_MS = 1200;
-const VISUAL_EVENT_NAME = "ancient-defense:visual-event";
 let levelUpEffects = [];
 window.addEventListener(VISUAL_EVENT_NAME, (event) => {
     const detail = event.detail;
@@ -60,5 +60,4 @@ function drawLevelUpEffect(context, effect, nowMs) {
     context.fillText(effect.heroAbbreviation, effect.x, effect.y + 4);
     context.restore();
 }
-export {};
 //# sourceMappingURL=level-up-feedback.js.map

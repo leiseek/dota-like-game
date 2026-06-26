@@ -1,10 +1,10 @@
 ---
 doc_id: WEB_ADAPTER_STRUCTURE
-version: 0.1.1
+version: 0.1.2
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-26
-change_summary: Initial Web adapter modular boundary guide with realistic first guardrail
+change_summary: Selection profile module extraction target added
 ---
 
 # Web Adapter Structure
@@ -81,11 +81,22 @@ platform-web/src/input/*.ts
   Hit testing, click handling, and user interaction translation.
 ```
 
+## Extraction Progress
+
+```text
+Done:
+- Created platform-web/src/profiles/selection-profiles.ts as the target home for hero names, enemy names, hero profiles, enemy profiles, and status badge copy.
+
+Next:
+- Replace duplicate constants/functions in main.ts with imports from profiles/selection-profiles.ts.
+- Lower the main.ts line limit after the duplicate block is removed.
+```
+
 ## Refactor Roadmap
 
 1. Wire `main.ts` to call `emitVisualEventsFromStateDiff(previousState, nextState)`.
 2. Remove the compatibility Canvas/HUD source from `visual-event-source.ts`.
-3. Extract hero/enemy profile data from `main.ts` into `profiles/selection-profiles.ts`.
+3. Replace hero/enemy profile data in `main.ts` with `profiles/selection-profiles.ts` imports.
 4. Extract selection panel drawing into `renderers/selection-panel.ts`.
 5. Extract combat and obstacle VFX drawing into `renderers/combat-effects.ts`.
 6. Extract DOM/HUD sync into `ui/hud.ts`.

@@ -1,13 +1,31 @@
 ---
 doc_id: CHANGELOG
-version: 0.8.2
+version: 0.8.3
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-26
-change_summary: Web main module growth guard added
+change_summary: Selection profile module added
 ---
 
 # Changelog
+
+## [0.8.3] - 2026-06-26
+
+### Added
+
+- Added `platform-web/src/profiles/selection-profiles.ts` as the target module for Web selection profile data.
+- The new module centralizes hero display names, enemy display names, hero profiles, enemy profiles, status badges, and status-name helpers.
+
+### Changed
+
+- Updated `docs/WEB_ADAPTER_STRUCTURE.md` to mark the selection profile module as the first concrete extraction target and clarify the next step: replacing duplicate `main.ts` constants/functions with imports.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: This PR creates the extraction target and compiles it, but does not yet remove the duplicate block from `main.ts` because the current connector path only supports whole-file replacement for that large file.
+Required Changes: Validate through CI and PR Preview, then safely patch `main.ts` to import from `profiles/selection-profiles.ts`, delete the duplicate constants/functions, and lower the line limit.
+Risk Level: Low
 
 ## [0.8.2] - 2026-06-26
 

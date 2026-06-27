@@ -1,0 +1,1 @@
+{"version":3,"file":"visual-event-bridge.js","sourceRoot":"","sources":["../src/visual-event-bridge.ts"],"names":[],"mappings":"AAAA,MAAM,CAAC,MAAM,iBAAiB,GAAG,8BAA8B,CAAC;AAsBhE,MAAM,UAAU,mBAAmB,CAAC,MAAsB;IACxD,MAAM,CAAC,aAAa,CAAC,IAAI,WAAW,CAAiB,iBAAiB,EAAE,EAAE,MAAM,EAAE,CAAC,CAAC,CAAC;AACvF,CAAC"}

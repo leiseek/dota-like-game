@@ -36,6 +36,9 @@ test("settlementLabel summarizes outcome, stars, and crystals", () => {
     stars: 3,
     remainingCrystals: 5,
     maxCrystals: 5,
+    recoveredCrystals: 1,
+    stolenCrystals: 0,
+    escapedCrystals: 0,
   } satisfies SettlementState;
 
   const defeatSettlement = {
@@ -45,6 +48,9 @@ test("settlementLabel summarizes outcome, stars, and crystals", () => {
     stars: 0,
     remainingCrystals: 0,
     maxCrystals: 5,
+    recoveredCrystals: 0,
+    stolenCrystals: 5,
+    escapedCrystals: 5,
   } satisfies SettlementState;
 
   assert.equal(settlementLabel(victorySettlement), "胜利 · 3★ · 水晶 5/5");

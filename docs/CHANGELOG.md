@@ -1,13 +1,33 @@
 ---
 doc_id: CHANGELOG
-version: 0.8.5
+version: 0.8.6
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-26
-change_summary: Refactor codemod dry-run added to check
+change_summary: Refactor codemod fixture tests added
 ---
 
 # Changelog
+
+## [0.8.6] - 2026-06-26
+
+### Added
+
+- Added `scripts/refactor-web-selection-profiles.test.mjs` with fixture coverage for the selection profile extraction codemod.
+- Added `npm run test:scripts` for Node-based script tests.
+- Wired script tests into `npm run check` through `npm run check:web-refactors`.
+
+### Changed
+
+- Refactored `scripts/refactor-web-selection-profiles.mjs` into a testable module that exports `transformSelectionProfileSource(source)` while preserving the existing CLI behavior.
+- The codemod fixture now verifies that duplicate display-name/profile/status blocks are removed, profile imports are added, status badge lookups are rewritten, unrelated functions are preserved, and the transform is idempotent after extraction.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: This still does not commit the generated `main.ts` extraction, but it turns the codemod from an untested migration script into a continuously tested refactor tool.
+Required Changes: Validate through CI and PR Preview, then run the codemod in a patch-capable environment to commit the real `main.ts` reduction and lower the line guard.
+Risk Level: Low
 
 ## [0.8.5] - 2026-06-26
 
@@ -77,5 +97,5 @@ Risk Level: Low
 
 Review Result: Pass
 Main Issues: This PR establishes a hard anti-growth guard and structure rules, but does not yet reduce the existing `main.ts` size. The next PR should extract one concrete area such as selection profiles or selection panel rendering.
-Required Changes: Validate through CI and PR Preview, then begin reducing `main.ts` by moving profile/panel/VFX code into focused modules and lowering the line limit after each extraction.
+Required Changes: Validate through CI and PR Preview, then begin reducing `main.ts` by moving profile/panel/VFX code into focused modules and lowering the line limit.
 Risk Level: Low

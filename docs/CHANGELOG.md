@@ -1,13 +1,32 @@
 ---
 doc_id: CHANGELOG
-version: 0.8.6
+version: 0.8.7
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-26
-change_summary: Refactor codemod fixture tests added
+change_summary: Shared Web UI label helpers added
 ---
 
 # Changelog
+
+## [0.8.7] - 2026-06-26
+
+### Added
+
+- Added `platform-web/src/ui/labels.ts` as the target module for shared Web UI label helpers.
+- Added `platform-web/src/ui/labels.test.ts` covering crystal status labels, game status labels, settlement summaries, and settlement reason labels.
+- Added `npm run test:web` to execute compiled Web adapter tests.
+
+### Changed
+
+- Wired `npm run test:web` into `npm run check` after Web TypeScript compilation.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: `main.ts` still contains duplicate local label helpers until the large-file extraction can be safely patched, but this PR creates a tested target module for the next extraction.
+Required Changes: Validate through CI and PR Preview, then replace the duplicated label helpers in `main.ts` with imports from `ui/labels.ts` and lower the line guard.
+Risk Level: Low
 
 ## [0.8.6] - 2026-06-26
 
@@ -87,15 +106,3 @@ Risk Level: Low
 - Added `scripts/check-web-main-size.mjs` to guard against unbounded `platform-web/src/main.ts` growth.
 - Added `npm run check:web-boundary` and wired it into `npm run check`.
 - Added `docs/WEB_ADAPTER_STRUCTURE.md` to define the Web adapter module boundaries, forbidden `main.ts` additions, preferred module targets, and refactor roadmap.
-
-### Changed
-
-- `npm run check` now fails if `platform-web/src/main.ts` exceeds the current boundary limit of 1300 lines.
-- Documented that the line limit must be lowered after each extraction pass to lock in reductions.
-
-### Self Review
-
-Review Result: Pass
-Main Issues: This PR establishes a hard anti-growth guard and structure rules, but does not yet reduce the existing `main.ts` size. The next PR should extract one concrete area such as selection profiles or selection panel rendering.
-Required Changes: Validate through CI and PR Preview, then begin reducing `main.ts` by moving profile/panel/VFX code into focused modules and lowering the line limit.
-Risk Level: Low

@@ -1,0 +1,46 @@
+name: Apply selection profile codemod
+
+on:
+  push:
+    branches:
+      - feature/web-run-selection-profile-codemod
+
+permissions:
+  contents: write
+
+jobs:
+  apply-codemod:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/web-run-selection-profile-codemod
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply selection profile codemod
+        run: npm run refactor:web-selection-profiles
+
+      - name: Remove temporary workflow
+        run: rm .github/workflows/apply-selection-profile-codemod.yml
+
+      - name: Verify generated result
+        run: npm run check
+
+      - name: Commit generated refactor
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add platform-web/src/main.ts .github/workflows/apply-selection-profile-codemod.yml
+          git commit -m "refactor(web): apply selection profile codemod"
+          git push origin feature/web-run-selection-profile-codemod

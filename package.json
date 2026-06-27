@@ -12,7 +12,8 @@
     "refactor:web-selection-profiles": "node scripts/refactor-web-selection-profiles.mjs",
     "refactor:web-selection-profiles:dry-run": "node scripts/refactor-web-selection-profiles.mjs --dry-run",
     "check:web-boundary": "node scripts/check-web-main-size.mjs",
-    "check": "npm run build && npm run test && tsc -p platform-web/tsconfig.json && npm run check:web-boundary"
+    "check:web-refactors": "npm run refactor:web-selection-profiles:dry-run",
+    "check": "npm run build && npm run test && tsc -p platform-web/tsconfig.json && npm run check:web-boundary && npm run check:web-refactors"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

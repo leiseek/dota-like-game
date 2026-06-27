@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const MAIN_TS_PATH = "platform-web/src/main.ts";
-const DRY_RUN = process.argv.includes("--dry-run");
 
 const importToAdd = `import {
   enemyName,
@@ -14,28 +14,68 @@ const importToAdd = `import {
 } from "./profiles/selection-profiles.js";
 `;
 
-const file = readFileSync(MAIN_TS_PATH, "utf8");
-let next = file;
-
-next = addSelectionProfileImport(next);
-next = removeSelectionProfileTypeAliases(next);
-next = removeStaticProfileBlocks(next);
-next = removeLocalSelectionProfileHelpers(next);
-next = replaceStatusLabelLookups(next);
-
-if (next === file) {
-  console.log("No selection-profile extraction changes were needed.");
-  process.exit(0);
+export function transformSelectionProfileSource(source) {
+  let next = source;
+  next = addSelectionProfileImport(next);
+  next = removeSelectionProfileTypeAliases(next);
+  next = removeStaticProfileBlocks(next);
+  next = removeLocalSelectionProfileHelpers(next);
+  next = replaceStatusLabelLookups(next);
+  return next;
 }
 
-if (DRY_RUN) {
-  console.log("Selection-profile extraction codemod would update platform-web/src/main.ts.");
-  console.log(`Line delta: ${lineCount(next) - lineCount(file)}`);
-  process.exit(0);
+if (isCliEntryPoint()) {
+  runCli();
 }
 
-writeFileSync(MAIN_TS_PATH, next);
-console.log(`Updated ${MAIN_TS_PATH}. Line delta: ${lineCount(next) - lineCount(file)}`);
+function runCli() {
+  const options = parseArgs(process.argv.slice(2));
+  const inputPath = options.inputPath ?? MAIN_TS_PATH;
+  const outputPath = options.outputPath ?? inputPath;
+  const file = readFileSync(inputPath, "utf8");
+  const next = transformSelectionProfileSource(file);
+
+  if (next === file) {
+    console.log("No selection-profile extraction changes were needed.");
+    return;
+  }
+
+  if (options.dryRun) {
+    console.log(`Selection-profile extraction codemod would update ${inputPath}.`);
+    console.log(`Line delta: ${lineCount(next) - lineCount(file)}`);
+    return;
+  }
+
+  writeFileSync(outputPath, next);
+  console.log(`Updated ${outputPath}. Line delta: ${lineCount(next) - lineCount(file)}`);
+}
+
+function parseArgs(args) {
+  const options = { dryRun: false, inputPath: undefined, outputPath: undefined };
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--dry-run") {
+      options.dryRun = true;
+      continue;
+    }
+    if (arg === "--input") {
+      options.inputPath = args[index + 1];
+      index += 1;
+      continue;
+    }
+    if (arg === "--output") {
+      options.outputPath = args[index + 1];
+      index += 1;
+      continue;
+    }
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+  return options;
+}
+
+function isCliEntryPoint() {
+  return process.argv[1] === fileURLToPath(import.meta.url);
+}
 
 function addSelectionProfileImport(source) {
   if (source.includes("./profiles/selection-profiles.js")) return source;

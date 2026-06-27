@@ -1,13 +1,31 @@
 ---
 doc_id: CHANGELOG
-version: 0.8.4
+version: 0.8.5
 status: active
 owner_agent: Team Leader Agent
 last_updated: 2026-06-26
-change_summary: Selection profile extraction codemod added
+change_summary: Refactor codemod dry-run added to check
 ---
 
 # Changelog
+
+## [0.8.5] - 2026-06-26
+
+### Added
+
+- Added `npm run check:web-refactors` to validate Web refactor codemods without mutating files.
+- Wired `npm run refactor:web-selection-profiles:dry-run` into `npm run check`.
+
+### Changed
+
+- `npm run check` now verifies that the selection profile extraction codemod can still parse the current `platform-web/src/main.ts` structure.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: This validates the codemod continuously but still does not commit the generated `main.ts` extraction because the current connector cannot safely apply large-file patches directly.
+Required Changes: Use a local checkout or a trusted patch-capable runner to execute `npm run refactor:web-selection-profiles`, then commit the generated `main.ts` diff and lower the line guard.
+Risk Level: Low
 
 ## [0.8.4] - 2026-06-26
 
@@ -60,24 +78,4 @@ Risk Level: Low
 Review Result: Pass
 Main Issues: This PR establishes a hard anti-growth guard and structure rules, but does not yet reduce the existing `main.ts` size. The next PR should extract one concrete area such as selection profiles or selection panel rendering.
 Required Changes: Validate through CI and PR Preview, then begin reducing `main.ts` by moving profile/panel/VFX code into focused modules and lowering the line limit after each extraction.
-Risk Level: Low
-
-## [0.8.1] - 2026-06-25
-
-### Added
-
-- Added `emitVisualEventsFromStateDiff(previousState, nextState)` to `visual-event-source.ts`.
-- The state-diff API emits explicit hero level-up visual events from hero level changes.
-- The state-diff API emits explicit crystal objective visual events from crystal status changes.
-
-### Changed
-
-- Kept the existing Canvas/HUD compatibility source active so current Web feedback remains functional until `main.ts` is wired to the new state-diff API.
-- Passive labels for both state-diff and compatibility level-up paths now resolve from `level001Config.heroConfigs` instead of a duplicated abbreviation table.
-
-### Self Review
-
-Review Result: Pass
-Main Issues: `main.ts` is not wired in this PR because replacing the 1100+ line file through the current connector is high-risk; the new API is ready for a smaller follow-up once we can patch the import and `setGameState` call safely.
-Required Changes: Validate through CI and PR Preview, then wire `main.ts` to call `emitVisualEventsFromStateDiff` and remove the compatibility Canvas/HUD source.
 Risk Level: Low

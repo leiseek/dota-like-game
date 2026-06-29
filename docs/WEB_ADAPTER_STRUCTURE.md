@@ -1,10 +1,10 @@
 ---
 doc_id: WEB_ADAPTER_STRUCTURE
-version: 0.1.3
+version: 0.1.4
 status: active
 owner_agent: Team Leader Agent
-last_updated: 2026-06-26
-change_summary: Selection profile codemod documented
+last_updated: 2026-06-27
+change_summary: UI label codemod documented
 ---
 
 # Web Adapter Structure
@@ -87,12 +87,14 @@ platform-web/src/input/*.ts
 Done:
 - Created platform-web/src/profiles/selection-profiles.ts as the target home for hero names, enemy names, hero profiles, enemy profiles, and status badge copy.
 - Added scripts/refactor-web-selection-profiles.mjs to automate the main.ts extraction safely.
+- Created platform-web/src/ui/labels.ts as the target home for shared HUD/status/settlement labels.
+- Added scripts/refactor-web-ui-labels.mjs to automate the main.ts label-helper extraction safely.
 
 Next:
-- Run npm run refactor:web-selection-profiles:dry-run to inspect the expected line delta.
-- Run npm run refactor:web-selection-profiles to update main.ts.
+- Run npm run refactor:web-selection-profiles:dry-run and npm run refactor:web-ui-labels:dry-run to inspect expected line deltas.
+- Run the codemods in a patch-capable environment to update main.ts.
 - Run npm run check.
-- Lower the main.ts line limit after the duplicate block is removed.
+- Lower the main.ts line limit after duplicate blocks are removed.
 ```
 
 ## Selection Profile Codemod
@@ -114,15 +116,35 @@ The codemod performs these operations:
 - removes duplicate helper functions now provided by the profile module
 - rewrites status badge lookups to `statusBadgeFor(statusEffect.type)`
 
+## UI Label Codemod
+
+Use this codemod to replace local HUD/status/settlement label helpers with imports from `platform-web/src/ui/labels.ts`:
+
+```bash
+npm run refactor:web-ui-labels:dry-run
+npm run refactor:web-ui-labels
+npm run check
+```
+
+The codemod performs these operations:
+
+- adds imports from `platform-web/src/ui/labels.ts`
+- removes local `crystalStatusLabel`
+- removes local `gameStatusLabel`
+- removes local `settlementLabel`
+- removes local `settlementReasonLabel`
+- preserves unrelated UI/rendering helpers such as `setText`, `drawSettlementPanel`, and selection panel rendering
+
 ## Refactor Roadmap
 
 1. Wire `main.ts` to call `emitVisualEventsFromStateDiff(previousState, nextState)`.
 2. Remove the compatibility Canvas/HUD source from `visual-event-source.ts`.
 3. Replace hero/enemy profile data in `main.ts` with `profiles/selection-profiles.ts` imports.
-4. Extract selection panel drawing into `renderers/selection-panel.ts`.
-5. Extract combat and obstacle VFX drawing into `renderers/combat-effects.ts`.
-6. Extract DOM/HUD sync into `ui/hud.ts`.
-7. Lower the `main.ts` line limit after each extraction.
+4. Replace duplicated label helpers in `main.ts` with `ui/labels.ts` imports.
+5. Extract selection panel drawing into `renderers/selection-panel.ts`.
+6. Extract combat and obstacle VFX drawing into `renderers/combat-effects.ts`.
+7. Extract DOM/HUD sync into `ui/hud.ts`.
+8. Lower the `main.ts` line limit after each extraction.
 
 ## Self Review Checklist
 

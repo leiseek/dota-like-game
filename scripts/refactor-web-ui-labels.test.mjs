@@ -31,7 +31,7 @@ function gameStatusLabel(status: GameState["status"]): string {
 }
 
 function settlementLabel(settlement: GameState["settlement"]): string {
-  return `${settlement.outcome === "victory" ? "胜利" : "失败"}`;
+  return settlement.outcome === "victory" ? "胜利" : "失败";
 }
 
 function setText(id: string, text: string): void {

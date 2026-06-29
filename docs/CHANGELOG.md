@@ -1,13 +1,33 @@
 ---
 doc_id: CHANGELOG
-version: 0.8.7
+version: 0.8.8
 status: active
 owner_agent: Team Leader Agent
-last_updated: 2026-06-26
-change_summary: Shared Web UI label helpers added
+last_updated: 2026-06-27
+change_summary: UI label extraction codemod added
 ---
 
 # Changelog
+
+## [0.8.8] - 2026-06-27
+
+### Added
+
+- Added `scripts/refactor-web-ui-labels.mjs` to automate replacing duplicated `main.ts` HUD/status/settlement label helpers with imports from `ui/labels.ts`.
+- Added `scripts/refactor-web-ui-labels.test.mjs` with fixture coverage for the UI label extraction codemod.
+- Added `npm run refactor:web-ui-labels` and `npm run refactor:web-ui-labels:dry-run` scripts.
+
+### Changed
+
+- Wired the UI label codemod dry-run into `npm run check:web-refactors`.
+- Updated `docs/WEB_ADAPTER_STRUCTURE.md` to document the UI label codemod and track it as the second safe extraction path for `main.ts`.
+
+### Self Review
+
+Review Result: Pass
+Main Issues: This PR adds and validates the UI label migration path, but does not yet commit the generated `main.ts` reduction because the connector still cannot safely patch the large file directly.
+Required Changes: Run the selection-profile and UI-label codemods in a patch-capable environment, validate `npm run check`, commit the real `main.ts` reduction, and lower the line guard.
+Risk Level: Low
 
 ## [0.8.7] - 2026-06-26
 
@@ -98,11 +118,3 @@ Review Result: Pass
 Main Issues: This PR creates the extraction target and compiles it, but does not yet remove the duplicate block from `main.ts` because the current connector path only supports whole-file replacement for that large file.
 Required Changes: Validate through CI and PR Preview, then safely patch `main.ts` to import from `profiles/selection-profiles.ts`, delete the duplicate constants/functions, and lower the line limit.
 Risk Level: Low
-
-## [0.8.2] - 2026-06-26
-
-### Added
-
-- Added `scripts/check-web-main-size.mjs` to guard against unbounded `platform-web/src/main.ts` growth.
-- Added `npm run check:web-boundary` and wired it into `npm run check`.
-- Added `docs/WEB_ADAPTER_STRUCTURE.md` to define the Web adapter module boundaries, forbidden `main.ts` additions, preferred module targets, and refactor roadmap.
